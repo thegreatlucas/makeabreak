@@ -440,6 +440,10 @@ async function openaiResponses(key,body,signal){
   if(j.error) throw new Error(j.error.message);
   let text='';
   (j.output||[]).forEach(o=>(o.content||[]).forEach(c=>{if(c.type==='output_text')text+=c.text;}));
+  if(!text&&j.output_text)text=j.output_text;
+  if(!text&&j.status==='incomplete')
+    throw new Error('resposta cortada ('+(j.incomplete_details?.reason||'limite de tokens')+')');
+  if(!text)throw new Error('resposta vazia (status: '+(j.status||'?')+')');
   return text;
 }
 const ED_BRIEF={
@@ -473,14 +477,12 @@ Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido
     const ctrl=new AbortController();
     const to=setTimeout(()=>ctrl.abort(),120000); // 2 min por busca
     try{
-      const text=await openaiResponses(key,{
-        model:cfg('cfg-model-search'),
-        tools:[{type:'web_search'}],
-        max_output_tokens:1500,
-        input:mkPrompt(ed)
-      },ctrl.signal);
+      const model=cfg('cfg-model-search');
+      const body={model,tools:[{type:'web_search'}],max_output_tokens:8000,input:mkPrompt(ed)};
+      if(/^(gpt-5|o\d)/.test(model)) body.reasoning={effort:'low'}; // modelos de raciocínio: menos pensamento, mais velocidade
+      const text=await openaiResponses(key,body,ctrl.signal);
       const m=text.match(/\{[\s\S]*\}/);
-      if(!m) throw new Error('resposta sem JSON');
+      if(!m) throw new Error('resposta sem JSON: "'+text.slice(0,120).replace(/\s+/g,' ')+'..."');
       const data=JSON.parse(m[0]);
       const novas=(data.noticias||[]).filter(n=>n&&n.titulo).map(n=>({
         titulo:n.titulo,link:n.link||'',fonte:(n.fonte||'web')+' · via GPT',
