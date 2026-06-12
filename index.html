@@ -346,7 +346,7 @@ const FEEDS=[
   {nome:'G1 Tecnologia',url:'https://g1.globo.com/rss/g1/tecnologia/',ed:'NEWS',on:true},
   {nome:'G1 Pop & Arte',url:'https://g1.globo.com/rss/g1/pop-arte/',ed:'PLANS',on:true},
   {nome:'BBC Brasil',url:'https://feeds.bbci.co.uk/portuguese/rss.xml',ed:'NEWS',on:false},
-  {nome:'Omelete',url:'https://www.omelete.com.br/rss',ed:'PLANS',on:true},
+  {nome:'Omelete (RSS instável)',url:'https://www.omelete.com.br/rss',ed:'PLANS',on:false},
   {nome:'Rolling Stone Brasil',url:'https://rollingstone.com.br/feed/',ed:'PLANS',on:true},
 ];
 function renderFeeds(){
@@ -421,48 +421,82 @@ async function fetchFeeds(){
 }
 
 /* ===================== BUSCA WEB VIA GPT ===================== */
+/* Uma chamada por editoria, em paralelo: muito mais rápido e os resultados
+   vão aparecendo conforme cada busca termina. */
+let _searching=false;
+async function openaiResponses(key,body,signal){
+  // tenta web_search; se o modelo/conta não aceitar, refaz com web_search_preview
+  let r=await fetch('https://api.openai.com/v1/responses',{
+    method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+    body:JSON.stringify(body),signal});
+  let j=await r.json();
+  if(j.error&&/web_search/.test(j.error.message||'')&&body.tools){
+    body={...body,tools:[{type:'web_search_preview'}]};
+    r=await fetch('https://api.openai.com/v1/responses',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+      body:JSON.stringify(body),signal});
+    j=await r.json();
+  }
+  if(j.error) throw new Error(j.error.message);
+  let text='';
+  (j.output||[]).forEach(o=>(o.content||[]).forEach(c=>{if(c.type==='output_text')text+=c.text;}));
+  return text;
+}
+const ED_BRIEF={
+  DESTAQUE:'3 grandes acontecimentos da semana com repercussão ampla: descobertas científicas, marcos, premiações, mudanças significativas em tecnologia, assuntos muito comentados',
+  UPDATES:'5 notícias úteis profissionalmente: IA, tecnologia, ferramentas digitais, marketing, CRM, automação, dados, estudos, cursos gratuitos, inovação',
+  REDES:'5 novidades de redes sociais: funcionalidades novas, mudanças de algoritmo, estudos de comportamento e dados de mercado de Instagram, TikTok, YouTube, LinkedIn, WhatsApp, Threads, X e Meta',
+  NEWS:'4 assuntos curiosos e comentáveis: tendências, fenômenos da internet, memes relevantes, cultura digital, bastidores do mercado',
+  PLANS:'4 lançamentos culturais: filmes, séries, livros, eventos, festivais, música, exposições — priorize o que estreia ou acontece no Brasil'
+};
 async function gptSearch(){
+  if(_searching)return;
   saveConfig();
   const key=cfg('cfg-key');
   if(!key){setStatus('coleta-status','Configure a API key na aba 1.','err');go('config');return;}
-  setStatus('coleta-status','GPT pesquisando na web (pode levar ~1 min)...');
-  const tipo=getTipo();
-  const tipoTema=cfg('cfg-tipo-tema');
+  _searching=true;
+  const t0=Date.now();
+  const timer=setInterval(()=>{
+    setStatus('coleta-status',`GPT pesquisando (5 buscas em paralelo)... ${Math.round((Date.now()-t0)/1000)}s`);
+  },1000);
+  const tipo=getTipo(), tipoTema=cfg('cfg-tipo-tema');
   let tipoInstr='';
-  if(tipo==='especial'&&tipoTema) tipoInstr=`\nESTA É UMA EDIÇÃO ESPECIAL TEMÁTICA sobre: "${tipoTema}". Além da distribuição normal, priorize notícias relacionadas a esse tema em todas as editorias (busque pelo menos 5 notícias diretamente ligadas ao tema).`;
-  if(tipo==='campanha'&&tipoTema) tipoInstr=`\nESTA EDIÇÃO APOIA A CAMPANHA "${tipoTema}". Busque também 1-2 notícias ou dados recentes relacionados à campanha (estudos, ações de marcas, iniciativas) e marque-as com editoria NEWS.`;
-  const prompt=`Você é o pesquisador da newsletter brasileira "Make a Break" (marketing, comunicação, tecnologia, negócios e cultura digital).${tipoInstr}
-Pesquise na web as notícias mais relevantes dos últimos 7 dias e devolva entre 15 e 25 notícias REAIS e RECENTES, distribuídas assim:
-- 2 a 4 candidatas a DESTAQUE: grandes acontecimentos da semana, descobertas científicas, marcos, premiações, mudanças significativas em tecnologia, assuntos amplamente comentados;
-- 5 a 7 para UPDATES: IA, tecnologia, ferramentas digitais, marketing, CRM, automação, dados, estudos, cursos gratuitos, inovação (sensação: "isso pode me ajudar profissionalmente");
-- 4 a 6 para REDES: novas funcionalidades, mudanças de algoritmo, estudos de comportamento e dados de mercado de Instagram, TikTok, YouTube, LinkedIn, WhatsApp, Threads, X e Meta;
-- 3 a 5 para NEWS: assuntos curiosos, tendências, fenômenos da internet, memes relevantes, cultura digital, bastidores do mercado (sensação: "preciso comentar isso com alguém");
-- 3 a 5 para PLANS: filmes, séries, livros, eventos, festivais, música, exposições e lançamentos culturais — priorize o que estreia/acontece no Brasil (sensação: "legal, vou salvar isso").
-PROIBIDO: política partidária, disputas ideológicas, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
-Prefira fontes confiáveis (Meio & Mensagem, B9, Exame, Fast Company, AdAge, TechCrunch, The Verge, Olhar Digital, Wired, G1, BBC, Bloomberg, Omelete, Rolling Stone, AdoroCinema).
-Responda SOMENTE com JSON válido, sem markdown, neste formato:
-{"noticias":[{"titulo":"...","resumo":"resumo factual de 1-2 frases","fonte":"nome do veículo","link":"url","editoria":"DESTAQUE|UPDATES|REDES|NEWS|PLANS"}]}`;
-  try{
-    const r=await fetch('https://api.openai.com/v1/responses',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-      body:JSON.stringify({model:cfg('cfg-model-search'),tools:[{type:'web_search'}],input:prompt})
-    });
-    const j=await r.json();
-    if(j.error) throw new Error(j.error.message);
-    let text='';
-    (j.output||[]).forEach(o=>(o.content||[]).forEach(c=>{if(c.type==='output_text')text+=c.text;}));
-    const m=text.match(/\{[\s\S]*\}/);
-    if(!m) throw new Error('não consegui extrair JSON da resposta');
-    const data=JSON.parse(m[0]);
-    const novas=(data.noticias||[]).map(n=>({titulo:n.titulo,link:n.link||'',fonte:(n.fonte||'GPT web search')+' · via GPT',resumo:n.resumo||'',data:'',editoria:['DESTAQUE','UPDATES','REDES','NEWS','PLANS'].includes(n.editoria)?n.editoria:'NEWS'}));
-    addItems(novas);
-    setStatus('coleta-status',`GPT trouxe ${novas.length} notícias — total: ${S.items.length}`,'ok');
-    log('coleta-log',`✔ GPT web search: ${novas.length} notícias adicionadas`);
-  }catch(e){
-    setStatus('coleta-status','Erro na busca GPT: '+e.message,'err');
-    log('coleta-log','✘ GPT web search: '+e.message);
-  }
+  if(tipo==='especial'&&tipoTema) tipoInstr=` Esta é uma edição especial sobre "${tipoTema}": priorize notícias ligadas a esse tema quando existirem.`;
+  if(tipo==='campanha'&&tipoTema) tipoInstr=` Se encontrar notícia recente ligada à campanha "${tipoTema}", inclua.`;
+  const mkPrompt=(ed)=>`Pesquise na web e devolva ${ED_BRIEF[ed]}. Apenas notícias REAIS dos últimos 7 dias, em português ou inglês.${tipoInstr}
+PROIBIDO: política partidária, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
+Prefira fontes confiáveis (Meio & Mensagem, B9, Exame, Fast Company, TechCrunch, The Verge, Olhar Digital, Wired, G1, BBC, Bloomberg, Omelete, Rolling Stone, AdoroCinema).
+Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido, sem markdown:
+{"noticias":[{"titulo":"...","resumo":"1 frase factual","fonte":"veículo","link":"url"}]}`;
+  let total=0,fail=0;
+  await Promise.allSettled(Object.keys(ED_BRIEF).map(async ed=>{
+    const ctrl=new AbortController();
+    const to=setTimeout(()=>ctrl.abort(),120000); // 2 min por busca
+    try{
+      const text=await openaiResponses(key,{
+        model:cfg('cfg-model-search'),
+        tools:[{type:'web_search'}],
+        max_output_tokens:1500,
+        input:mkPrompt(ed)
+      },ctrl.signal);
+      const m=text.match(/\{[\s\S]*\}/);
+      if(!m) throw new Error('resposta sem JSON');
+      const data=JSON.parse(m[0]);
+      const novas=(data.noticias||[]).filter(n=>n&&n.titulo).map(n=>({
+        titulo:n.titulo,link:n.link||'',fonte:(n.fonte||'web')+' · via GPT',
+        resumo:n.resumo||'',data:'',editoria:ed}));
+      addItems(novas);total+=novas.length;
+      log('coleta-log',`✔ GPT ${ED_LABEL(ed)}: ${novas.length} notícias`);
+    }catch(e){
+      fail++;
+      log('coleta-log',`✘ GPT ${ED_LABEL(ed)}: ${e.name==='AbortError'?'tempo esgotado (2 min)':e.message}`);
+    }finally{clearTimeout(to);}
+  }));
+  clearInterval(timer);_searching=false;
+  const secs=Math.round((Date.now()-t0)/1000);
+  setStatus('coleta-status',
+    fail===5?'Busca GPT falhou — veja o log acima':`GPT trouxe ${total} notícias em ${secs}s — total: ${S.items.length}`,
+    fail===5?'err':'ok');
 }
 
 /* ===================== MANUAL ===================== */
