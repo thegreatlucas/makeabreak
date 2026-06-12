@@ -81,6 +81,9 @@
   .bullet-row input.lk{width:34%}
   .bullet-row button{background:none;border:none;color:var(--err);cursor:pointer;font-size:16px}
   .addb{background:none;border:1px dashed var(--border);color:var(--muted);width:100%;padding:6px;border-radius:8px;cursor:pointer;font-size:12px}
+  .thumb{height:42px;max-width:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none}
+  a.imglink{color:var(--cyan);font-size:12px;text-decoration:none}
+  .ed-sec p.hint{margin-bottom:10px}
   .log{background:#000;border-radius:8px;padding:10px 12px;font-family:Consolas,monospace;font-size:12px;color:var(--muted);max-height:140px;overflow:auto;white-space:pre-wrap;margin-top:10px;display:none}
   .log.show{display:block}
   .tipos{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
@@ -200,7 +203,8 @@
     <div class="feeds" id="feed-list"></div>
     <div class="toolbar">
       <button class="btn" onclick="fetchFeeds()">📡 Buscar feeds RSS</button>
-      <button class="btn cyan" onclick="gptSearch()">🔎 Buscar com GPT (web search)</button>
+      <button class="btn" onclick="gnewsSearch()">📰 Google Notícias (grátis)</button>
+      <button class="btn cyan" onclick="gptSearch()" title="Busca apenas as editorias que ainda têm poucas notícias">🔎 Completar com GPT</button>
       <div class="spacer"></div>
       <span class="status" id="coleta-status"></span>
     </div>
@@ -420,6 +424,50 @@ async function fetchFeeds(){
   setStatus('coleta-status',`${ok}/${ativos.length} feeds carregados — ${S.items.length} notícias na lista`, ok?'ok':'err');
 }
 
+/* ===================== GOOGLE NOTÍCIAS (RSS GRÁTIS, SEM TOKEN) ===================== */
+const GN_BASE='https://news.google.com/rss';
+const GN_PARAMS='hl=pt-BR&gl=BR&ceid=BR:pt-419';
+const GN_QUERIES={
+  DESTAQUE:[`${GN_BASE}/headlines/section/topic/TECHNOLOGY?${GN_PARAMS}`,
+            `${GN_BASE}/headlines/section/topic/SCIENCE?${GN_PARAMS}`],
+  UPDATES:[`${GN_BASE}/search?q=${encodeURIComponent('"inteligência artificial" OR "marketing digital" OR "nova ferramenta" when:7d')}&${GN_PARAMS}`],
+  REDES:[`${GN_BASE}/search?q=${encodeURIComponent('(Instagram OR TikTok OR WhatsApp OR YouTube OR LinkedIn OR Threads) (recurso OR novidade OR atualização OR teste) when:7d')}&${GN_PARAMS}`],
+  NEWS:[`${GN_BASE}/search?q=${encodeURIComponent('(viral OR meme OR "cultura digital" OR tendência OR publicidade) when:7d')}&${GN_PARAMS}`],
+  PLANS:[`${GN_BASE}/search?q=${encodeURIComponent('(estreia OR lançamento OR show OR festival OR exposição) (filme OR série OR música OR cinema) Brasil when:7d')}&${GN_PARAMS}`]
+};
+function parseGNews(xmlText,editoria){
+  const doc=new DOMParser().parseFromString(xmlText,'text/xml');
+  const out=[];
+  doc.querySelectorAll('item').forEach(it=>{
+    const get=t=>{const n=it.getElementsByTagName(t)[0];return n?n.textContent.trim():'';};
+    let titulo=get('title');
+    const fonte=get('source')||'Google Notícias';
+    // Google News põe " - Veículo" no fim do título
+    if(fonte&&titulo.endsWith(' - '+fonte)) titulo=titulo.slice(0,-(fonte.length+3));
+    out.push({titulo,link:get('link'),resumo:'',data:get('pubDate'),fonte:fonte+' · Google News',editoria});
+  });
+  return out.filter(i=>i.titulo);
+}
+async function gnewsSearch(){
+  setStatus('coleta-status','Buscando no Google Notícias (grátis)...');
+  let total=0,fail=0;
+  await Promise.allSettled(Object.entries(GN_QUERIES).map(async([ed,urls])=>{
+    let got=0;
+    for(const u of urls){
+      try{
+        const xml=await fetchWithProxy(u);
+        const items=recentOnly(parseGNews(xml,ed),8).slice(0,12);
+        addItems(items);got+=items.length;
+      }catch(e){fail++;}
+    }
+    total+=got;
+    log('coleta-log',`${got?'✔':'✘'} Google News ${ED_LABEL(ed)}: ${got} notícias`);
+  }));
+  setStatus('coleta-status',
+    total?`Google Notícias trouxe ${total} notícias — total: ${S.items.length}`:'Google Notícias falhou — tente o GPT',
+    total?'ok':'err');
+}
+
 /* ===================== BUSCA WEB VIA GPT ===================== */
 /* Uma chamada por editoria, em paralelo: muito mais rápido e os resultados
    vão aparecendo conforme cada busca termina. */
@@ -458,10 +506,19 @@ async function gptSearch(){
   saveConfig();
   const key=cfg('cfg-key');
   if(!key){setStatus('coleta-status','Configure a API key na aba 1.','err');go('config');return;}
+  // só busca editorias que ainda têm poucas notícias (economiza tokens)
+  const MIN=8;
+  const counts={};S.items.forEach(i=>counts[i.editoria]=(counts[i.editoria]||0)+1);
+  const alvo=Object.keys(ED_BRIEF).filter(ed=>(counts[ed]||0)<MIN);
+  if(!alvo.length){
+    setStatus('coleta-status',`Todas as editorias já têm ${MIN}+ notícias — nada a buscar. (Use os filtros da Curadoria.)`,'ok');
+    return;
+  }
+  log('coleta-log','→ GPT vai buscar só: '+alvo.map(ED_LABEL).join(', ')+' (as outras já têm '+MIN+'+)');
   _searching=true;
   const t0=Date.now();
   const timer=setInterval(()=>{
-    setStatus('coleta-status',`GPT pesquisando (5 buscas em paralelo)... ${Math.round((Date.now()-t0)/1000)}s`);
+    setStatus('coleta-status',`GPT pesquisando ${alvo.length} editoria(s)... ${Math.round((Date.now()-t0)/1000)}s`);
   },1000);
   const tipo=getTipo(), tipoTema=cfg('cfg-tipo-tema');
   let tipoInstr='';
@@ -473,7 +530,7 @@ Prefira fontes confiáveis (Meio & Mensagem, B9, Exame, Fast Company, TechCrunch
 Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido, sem markdown:
 {"noticias":[{"titulo":"...","resumo":"1 frase factual","fonte":"veículo","link":"url"}]}`;
   let total=0,fail=0;
-  await Promise.allSettled(Object.keys(ED_BRIEF).map(async ed=>{
+  await Promise.allSettled(alvo.map(async ed=>{
     const ctrl=new AbortController();
     const to=setTimeout(()=>ctrl.abort(),120000); // 2 min por busca
     try{
@@ -497,8 +554,8 @@ Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido
   clearInterval(timer);_searching=false;
   const secs=Math.round((Date.now()-t0)/1000);
   setStatus('coleta-status',
-    fail===5?'Busca GPT falhou — veja o log acima':`GPT trouxe ${total} notícias em ${secs}s — total: ${S.items.length}`,
-    fail===5?'err':'ok');
+    fail===alvo.length?'Busca GPT falhou — veja o log acima':`GPT trouxe ${total} notícias em ${secs}s — total: ${S.items.length}`,
+    fail===alvo.length?'err':'ok');
 }
 
 /* ===================== MANUAL ===================== */
@@ -605,11 +662,11 @@ Responda SOMENTE com JSON válido neste formato exato:
  "preheader": "frase curta de apoio ao assunto",
  "highlights": ["3 manchetes curtíssimas pro banner inicial"],
  "intro": {"saudacao":"saudação criativa ligada ao tema da semana (ex.: 'Boa tarde, Barbies e Oppenheimers!')","texto":"2-4 frases de abertura convidando pro break"},
- "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"parágrafo de 4-6 frases"},
- "updates": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo da matéria principal","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
- "redes": {"bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]},
- "news": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
- "plans": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
+ "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"parágrafo de 4-6 frases","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
+ "updates": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo da matéria principal","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
+ "redes": {"titulo":"TÍTULO CURTO E ESPERTO PRO BLOCO DE REDES","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]},
+ "news": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
+ "plans": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
  "fechamento": "1 frase simpática de despedida"${tipo==='campanha'?',\n "campanha": {"titulo":"título curto do box da campanha","texto":"2-4 frases informativas e acolhedoras sobre a causa"}':''}
 }`;
 }
@@ -635,7 +692,9 @@ async function generateEdition(regen){
     });
     const j=await r.json();
     if(j.error) throw new Error(j.error.message);
+    const imgsAntes=S.edition?.imagens; // preserva URLs de imagem ao regenerar
     S.edition=JSON.parse(j.choices[0].message.content);
+    S.edition.imagens=Object.assign({banner:'',updates:'',redes:'',news:'',plans:''},imgsAntes||{});
     setStatus('gen-status','Edição gerada! Revise abaixo.','ok');
     renderEditor();
   }catch(e){
@@ -651,9 +710,23 @@ function renderEditor(){
   document.getElementById('editor-card').style.display='block';
   const fld=(path,label,val,ta)=>`<div class="ed-field"><label>${label}</label>${ta?`<textarea data-p="${path}">${esc(val)}</textarea>`:`<input type="text" data-p="${path}" value="${esc(val)}">`}</div>`;
   const bullets=(sec,arr)=>`<div data-bsec="${sec}">${(arr||[]).map((b,i)=>brow(sec,i,b)).join('')}</div><button class="addb" onclick="addBullet('${sec}')">+ bullet</button>`;
+  const imgRow=(k,label,sug)=>`<div class="ed-field">
+    <label>${label}${sug?` &nbsp;·&nbsp; sugestão: <i>${esc(sug)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(sug)}" target="_blank">🔍 Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(sug)}" target="_blank">Unsplash</a>`:''}</label>
+    <div style="display:flex;gap:8px;align-items:center">
+      <input type="text" data-p="imagens.${k}" value="${esc(e.imagens?.[k]||'')}" placeholder="URL da imagem hospedada (biblioteca do RD Station, Imgur, seu site...)">
+      <img class="thumb" data-thumb="${k}" src="${esc(e.imagens?.[k]||'')}" onerror="this.style.display='none'" ${e.imagens?.[k]?'':'style="display:none"'}>
+    </div></div>`;
   document.getElementById('editor').innerHTML=`
     ${fld('assunto','Assunto do e-mail',e.assunto)}
     ${fld('preheader','Preheader',e.preheader)}
+    <div class="ed-sec"><h3>🖼️ Imagens da edição</h3>
+      <p class="hint">Como na referência: uma imagem de abertura (banner do destaque) e uma por editoria. Cole URLs de imagens hospedadas — para o envio real, suba na biblioteca de imagens do RD Station e copie o link de lá (e-mail não aceita imagem local).</p>
+      ${imgRow('banner','Banner / Destaque',e.destaque?.sugestao_imagem)}
+      ${imgRow('updates','Updates',e.updates?.sugestao_imagem)}
+      ${imgRow('redes','Redes Sociais',e.redes?.sugestao_imagem)}
+      ${imgRow('news','News',e.news?.sugestao_imagem)}
+      ${imgRow('plans','Plans',e.plans?.sugestao_imagem)}
+    </div>
     <div class="ed-sec"><h3>Banner — highlights <span class="pill DESTAQUE">TOPO</span></h3>
       ${(e.highlights||[]).map((h,i)=>fld('highlights.'+i,'Highlight '+(i+1),h)).join('')}</div>
     <div class="ed-sec"><h3>Abertura</h3>
@@ -670,6 +743,7 @@ function renderEditor(){
       ${fld('updates.texto','Texto',e.updates?.texto||'',1)}
       <label>O que mais você precisa saber hoje:</label>${bullets('updates',e.updates?.bullets)}</div>
     <div class="ed-sec"><h3>Redes Sociais <span class="pill REDES">REDES</span></h3>
+      ${fld('redes.titulo','Título do bloco',e.redes?.titulo||'')}
       <label>E pra ficar por dentro das redes sociais:</label>${bullets('redes',e.redes?.bullets)}</div>
     <div class="ed-sec"><h3>News <span class="pill NEWS">NEWS</span></h3>
       ${fld('news.titulo','Título',e.news?.titulo||'')}
@@ -681,7 +755,14 @@ function renderEditor(){
       <label>E pra edificar ainda mais o seu fds:</label>${bullets('plans',e.plans?.bullets)}</div>
     ${fld('fechamento','Fechamento',e.fechamento||'')}`;
   document.getElementById('editor').querySelectorAll('[data-p]').forEach(inp=>{
-    inp.oninput=()=>setPath(S.edition,inp.dataset.p,inp.value);
+    inp.oninput=()=>{
+      setPath(S.edition,inp.dataset.p,inp.value);
+      if(inp.dataset.p.startsWith('imagens.')){ // atualiza a miniatura ao vivo
+        const k=inp.dataset.p.split('.')[1];
+        const im=document.querySelector(`img[data-thumb="${k}"]`);
+        if(im){im.src=inp.value;im.style.display=inp.value?'':'none';}
+      }
+    };
   });
   bindBullets();
 }
@@ -728,9 +809,10 @@ function mailBullets(arr){
       ${esc(b.emoji)}&nbsp; ${b.link?`<a href="${esc(b.link)}" target="_blank" style="color:${M.linkColor};text-decoration:underline;">${esc(b.texto)}</a>`:esc(b.texto)}
     </td></tr>`).join('')}</table>`;
 }
-function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets){
+function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets,img){
   return `
   <tr><td style="padding:28px 32px 0;">
+    ${img?`<img src="${esc(img)}" width="536" alt="${esc(titulo||tag||'')}" style="display:block;width:100%;height:auto;border-radius:8px;margin-bottom:12px;">`:''}
     ${tag?`<span style="display:inline-block;background:${tagColor};color:${onColor(tagColor)};font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;padding:3px 10px;">${tag}</span>`:''}
     ${titulo?`<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${esc(titulo)}</h2>`:''}
     ${texto?`<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(texto)}</p>`:''}
@@ -787,6 +869,9 @@ function buildEmailHtml(){
   </td></tr>
   ${festa}
 
+  <!-- banner / imagem de abertura -->
+  ${e.imagens?.banner?`<tr><td style="background:${headerBg};"><img src="${esc(e.imagens.banner)}" width="600" alt="banner" style="display:block;width:100%;height:auto;"></td></tr>`:''}
+
   <!-- highlights -->
   ${(e.highlights&&e.highlights.length)?`<tr><td style="background:${hlBg};padding:14px 32px;">
     ${e.highlights.map(h=>`<p style="margin:3px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${hlTxt};">${hlPrefix} ${esc(rep(h))}</p>`).join('')}
@@ -800,10 +885,10 @@ function buildEmailHtml(){
 
   ${boxCampanha}
   ${mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto)}
-  ${mailSection('UPDATES',secTag,e.updates?.titulo,e.updates?.texto,'O que mais você precisa saber hoje:',e.updates?.bullets)}
-  ${mailSection('REDES SOCIAIS',secTag,'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets)}
-  ${mailSection('NEWS',secTag,e.news?.titulo,e.news?.texto,'Tem mais News por aqui:',e.news?.bullets)}
-  ${mailSection('PLANS',secTag,e.plans?.titulo,e.plans?.texto,'E pra edificar ainda mais o seu fds:',e.plans?.bullets)}
+  ${mailSection('UPDATES',secTag,e.updates?.titulo,e.updates?.texto,'O que mais você precisa saber hoje:',e.updates?.bullets,e.imagens?.updates)}
+  ${mailSection('REDES SOCIAIS',secTag,e.redes?.titulo||'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets,e.imagens?.redes)}
+  ${mailSection('NEWS',secTag,e.news?.titulo,e.news?.texto,'Tem mais News por aqui:',e.news?.bullets,e.imagens?.news)}
+  ${mailSection('PLANS',secTag,e.plans?.titulo,e.plans?.texto,'E pra edificar ainda mais o seu fds:',e.plans?.bullets,e.imagens?.plans)}
 
   <!-- fechamento -->
   ${e.fechamento?`<tr><td style="padding:26px 32px 8px;">
