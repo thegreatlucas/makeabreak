@@ -44,9 +44,9 @@ O **pre-header** é fixo no padrão `Ano X - Edição #XXX - A Newsletter da Mak
 
 ## Identidade visual (Make ID)
 
-A interface do Studio usa a fonte oficial da Make, **Uni Sans** (carregada via CDN; dá para trocar por arquivos `.woff2` oficiais self-hosted para fidelidade total), e ícones de linha **Lucide** (estilo próximo ao SF Symbols da Apple) no lugar de emojis em toda a interface. O **e-mail/preview** e os bullets da newsletter mantêm os emojis de propósito, porque fazem parte do conteúdo enviado.
+A interface do Studio segue a identidade da **Make ID**: tema claro, tipografia **Uni Sans** (fonte oficial, **self-hosted** em `fonts/*.woff2`, pesos 400/500/600/700/800) e ícones de linha **Lucide** (estilo próximo ao SF Symbols da Apple) no lugar de emojis em toda a interface. O **e-mail/preview** e os bullets da newsletter mantêm os emojis e o visual preto + amarelo de propósito, porque são o conteúdo/identidade do próprio e-mail.
 
-Paleta da Make ID extraída da auditoria, disponível em variáveis CSS para o tema: navy `#070D42`, vermelho coral `#EA3428` (claro `#EB6057`), fundo claro `#F2F3F2`.
+Paleta (extraída da auditoria da Make ID), em variáveis CSS: navy `#070D42`, vermelho coral `#EA3428` (claro `#EB6057`), fundo claro. Elementos de marca aplicados: cabeçalho navy com a logo e o sinal de `+`, barras verticais coral nos títulos, rótulos navy e estados ativos em coral.
 
 ## Como publicar (GitHub Pages)
 
