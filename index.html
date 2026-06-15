@@ -92,6 +92,66 @@
   .tipos label.tipo input{margin-right:6px;accent-color:var(--yellow)}
   .tipos label.tipo b{font-size:14px}
   .tipos label.tipo small{display:block;color:var(--muted);font-size:12px;margin-top:5px;line-height:1.4;font-weight:400}
+
+  /* ===================== ANIMAÇÕES ===================== */
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes pop{0%{transform:scale(1)}40%{transform:scale(1.35)}100%{transform:scale(1)}}
+  @keyframes shimmer{0%{background-position:-468px 0}100%{background-position:468px 0}}
+  @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+  header.app .logo span{display:inline-block;animation:floaty 3.5s ease-in-out infinite}
+  nav.steps button{transition:background .18s ease,color .18s ease,border-color .18s ease,transform .12s ease}
+  nav.steps button:hover{transform:translateY(-1px)}
+  .tab.active{animation:fadeUp .35s ease both}
+  .tab.active .card{animation:fadeUp .42s ease both}
+  .tab.active .card:nth-child(2){animation-delay:.06s}
+  .tab.active .card:nth-child(3){animation-delay:.12s}
+  .tab.active .card:nth-child(4){animation-delay:.18s}
+  .card{transition:border-color .2s ease,box-shadow .2s ease}
+  .card:hover{box-shadow:0 8px 26px rgba(0,0,0,.22)}
+  .btn{transition:transform .12s ease,filter .12s ease,box-shadow .12s ease}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(0,0,0,.25)}
+  .btn:active{transform:translateY(1px);box-shadow:none}
+  .news-item{transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease;animation:fadeUp .3s ease both}
+  .news-item:hover{transform:translateY(-2px);border-color:var(--cyan);box-shadow:0 8px 22px rgba(0,0,0,.28)}
+  .feeds label.feed{transition:transform .12s ease,border-color .15s ease}
+  .feeds label.feed:hover{transform:translateY(-1px);border-color:var(--cyan)}
+  .pill,.tag{transition:transform .12s ease}
+  .news-item:hover .pill{transform:scale(1.05)}
+  .thumb{transition:transform .15s ease}
+  .thumb:hover{transform:scale(1.06)}
+  .vote{cursor:pointer;font-size:18px;line-height:1;background:none;border:1px solid var(--border);border-radius:8px;padding:5px 9px;transition:transform .12s ease,background .15s ease,border-color .15s ease;user-select:none}
+  .vote:hover{transform:translateY(-1px)}
+  .vote.up.on{background:rgba(61,220,132,.16);border-color:var(--ok)}
+  .vote.down.on{background:rgba(255,90,90,.16);border-color:var(--err)}
+  .vote.bump{animation:pop .35s ease}
+  .skel{background:linear-gradient(90deg,#1e2027 25%,#262932 37%,#1e2027 63%);background-size:900px 100%;animation:shimmer 1.4s linear infinite;border-radius:8px}
+
+  /* ----- bloco de notícia (curadoria + dashboard) ----- */
+  .ni-main{flex:1;min-width:0}
+  .news-item .ni-main .ttl{font-size:16px;line-height:1.5;font-weight:600;min-height:3em;display:flex;align-items:center}
+  .ni-side{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex:none}
+  .ni-actions{display:flex;gap:6px;align-items:center}
+  .btn-sm{display:inline-flex;align-items:center;gap:4px;background:var(--panel);border:1px solid var(--border);color:var(--text);font-size:12px;font-weight:600;padding:6px 10px;border-radius:8px;cursor:pointer;text-decoration:none;transition:transform .12s ease,border-color .15s ease,background .15s ease}
+  .btn-sm:hover{transform:translateY(-1px);border-color:var(--cyan)}
+  .btn-sm.acc{background:var(--cyan);color:#000;border-color:var(--cyan)}
+  .ni-edit{background:var(--panel);border:1px dashed var(--cyan);border-radius:10px;padding:12px;margin-top:8px;animation:fadeUp .25s ease both}
+  .ni-edit input,.ni-edit textarea{margin-bottom:6px}
+  .ni-edit .row-btns{display:flex;gap:8px}
+  .score-badge{font-size:11px;color:var(--muted);background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:2px 7px}
+  .prefbox{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-bottom:12px;line-height:1.6}
+  .prefbox b{color:var(--ok)} .prefbox i{color:var(--err);font-style:normal}
+  .kw{display:inline-block;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:1px 8px;margin:2px}
+
+  /* ----- galeria de imagens (Openverse) ----- */
+  .ov-tools{display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap}
+  .ov-tools input{flex:1;min-width:160px}
+  .ov-gallery{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+  .ov-thumb{width:88px;height:66px;object-fit:cover;border-radius:6px;border:2px solid var(--border);cursor:pointer;transition:transform .12s ease,border-color .15s ease}
+  .ov-thumb:hover{transform:scale(1.06);border-color:var(--cyan)}
+  .ov-thumb.sel{border-color:var(--yellow);box-shadow:0 0 0 2px var(--yellow)}
+
+  @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
 <body>
@@ -102,6 +162,7 @@
 </header>
 
 <nav class="steps">
+  <button data-tab="dashboard">📊 Dashboard</button>
   <button data-tab="config" class="active">1 · Configuração</button>
   <button data-tab="coleta">2 · Coleta de notícias</button>
   <button data-tab="curadoria">3 · Curadoria</button>
@@ -110,6 +171,22 @@
 </nav>
 
 <main>
+
+<!-- ===================== 0. DASHBOARD ===================== -->
+<section class="tab" id="tab-dashboard">
+  <div class="card">
+    <h2>📊 Dashboard de tendências <span class="tag">INTELIGENTE</span></h2>
+    <p class="hint">As notícias em alta de cada editoria (10+ por bloco). Dê 👍 no que tem a cara da Make e 👎 no que não tem: a news aprende suas preferências por editoria e passa a priorizar o que você curte, aqui e na Curadoria.</p>
+    <div class="toolbar">
+      <button class="btn" onclick="loadDashboard()">🔄 Carregar / atualizar tendências</button>
+      <button class="btn sec" onclick="resetPrefs()" title="Zera tudo que a news aprendeu">🧹 Limpar aprendizado</button>
+      <div class="spacer"></div>
+      <span class="status" id="dash-status"></span>
+    </div>
+    <div class="log" id="dash-log"></div>
+  </div>
+  <div id="dash-blocks"></div>
+</section>
 
 <!-- ===================== 1. CONFIG ===================== -->
 <section class="tab active" id="tab-config">
@@ -139,6 +216,15 @@
           <option value="gpt-5">gpt-5</option>
         </select>
       </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Inteligência <span class="tag">SUPABASE</span></h2>
+    <p class="hint">Guarda os votos 👍/👎 do Dashboard e da Curadoria para a news aprender que tipo de notícia você quer em cada editoria. Já vem configurado com o projeto da Make; em branco, usa só este navegador.</p>
+    <div class="row">
+      <div><label>Supabase Project URL</label><input type="text" id="cfg-supa-url" placeholder="https://xxxx.supabase.co"></div>
+      <div><label>Supabase anon key</label><input type="password" id="cfg-supa-key" placeholder="eyJhbGciOi..."></div>
     </div>
   </div>
 
@@ -296,16 +382,27 @@
 <script>
 /* ===================== ESTADO ===================== */
 const S = {
-  items: [],     // {id,titulo,link,fonte,resumo,data,editoria,sel,star}
-  edition: null  // objeto gerado pelo GPT
+  items: [],     // {id,titulo,link,fonte,resumo,data,editoria,sel,star,vote,editing}
+  edition: null, // objeto gerado pelo GPT
+  reserve: [],   // notícias extras dos feeds (reposição quando dá thumbs down)
+  trending: {DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]} // dashboard
 };
 let _id = 1;
+
+/* ===================== CREDENCIAIS PADRÃO (deploy) ===================== */
+/* Preenchido no deploy com o projeto Supabase da Make. A anon key é pública
+   por design (protegida por RLS). Em branco = usa só o localStorage. */
+const SUPA = {
+  url:'https://khtkzydjuqckzlybbtph.supabase.co',
+  key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtodGt6eWRqdXFja3pseWJidHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDU3NzksImV4cCI6MjA5NzA4MTc3OX0.Cr_WxerJ1D7cDowTQuTAPNbxP6XwgwBIaiQonMHKhTQ'
+};
 
 /* ===================== NAVEGAÇÃO ===================== */
 function go(tab){
   document.querySelectorAll('nav.steps button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+tab));
   if(tab==='curadoria') renderItems();
+  if(tab==='dashboard') renderDashboard();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav.steps button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
@@ -314,13 +411,16 @@ function setStatus(id,msg,cls){const el=document.getElementById(id);el.textConte
 function log(id,msg){const el=document.getElementById(id);el.classList.add('show');el.textContent+=msg+'\n';el.scrollTop=el.scrollHeight;}
 
 /* ===================== CONFIG ===================== */
-const CFG_FIELDS=['cfg-key','cfg-model','cfg-model-search','cfg-ano','cfg-edicao','cfg-mergetag','cfg-tema','cfg-tipo-tema','cfg-cor'];
+const CFG_FIELDS=['cfg-key','cfg-model','cfg-model-search','cfg-ano','cfg-edicao','cfg-mergetag','cfg-tema','cfg-tipo-tema','cfg-cor','cfg-supa-url','cfg-supa-key'];
 function saveConfig(){
   CFG_FIELDS.forEach(f=>localStorage.setItem('mab_'+f,document.getElementById(f).value));
   localStorage.setItem('mab_tipo',getTipo());
 }
 function loadConfig(){
   CFG_FIELDS.forEach(f=>{const v=localStorage.getItem('mab_'+f);if(v!==null)document.getElementById(f).value=v;});
+  // credenciais padrão do Supabase quando o usuário ainda não preencheu nada
+  if(!document.getElementById('cfg-supa-url').value && SUPA.url) document.getElementById('cfg-supa-url').value=SUPA.url;
+  if(!document.getElementById('cfg-supa-key').value && SUPA.key) document.getElementById('cfg-supa-key').value=SUPA.key;
   const t=localStorage.getItem('mab_tipo');
   if(t){const r=document.querySelector(`input[name=tipo][value=${t}]`);if(r)r.checked=true;}
   tipoChanged();
@@ -352,6 +452,27 @@ const FEEDS=[
   {nome:'BBC Brasil',url:'https://feeds.bbci.co.uk/portuguese/rss.xml',ed:'NEWS',on:false},
   {nome:'Omelete (RSS instável)',url:'https://www.omelete.com.br/rss',ed:'PLANS',on:false},
   {nome:'Rolling Stone Brasil',url:'https://rollingstone.com.br/feed/',ed:'PLANS',on:true},
+  // --- Tech & ferramentas (UPDATES) ---
+  {nome:'Tecnoblog',url:'https://tecnoblog.net/feed/',ed:'UPDATES',on:true},
+  {nome:'Canaltech',url:'https://canaltech.com.br/rss/',ed:'UPDATES',on:true},
+  {nome:'TecMundo',url:'https://www.tecmundo.com.br/rss',ed:'UPDATES',on:false},
+  {nome:'Ars Technica',url:'https://feeds.arstechnica.com/arstechnica/index',ed:'UPDATES',on:false},
+  {nome:'MIT Technology Review',url:'https://www.technologyreview.com/feed/',ed:'UPDATES',on:false},
+  {nome:'Engadget',url:'https://www.engadget.com/rss.xml',ed:'UPDATES',on:false},
+  // --- Marketing & comunicação (UPDATES) ---
+  {nome:'Adnews',url:'https://adnews.com.br/feed/',ed:'UPDATES',on:false},
+  // --- Redes sociais (REDES) ---
+  {nome:'Social Media Today',url:'https://www.socialmediatoday.com/feeds/news/',ed:'REDES',on:true},
+  {nome:'Search Engine Journal',url:'https://www.searchenginejournal.com/feed/',ed:'REDES',on:false},
+  // --- Cultura digital & curiosidades (NEWS) ---
+  {nome:'Mashable',url:'https://mashable.com/feeds/rss/all',ed:'NEWS',on:false},
+  {nome:'Hypeness',url:'https://www.hypeness.com.br/feed/',ed:'NEWS',on:true},
+  // --- Ciência & grandes acontecimentos (DESTAQUE) ---
+  {nome:'Smithsonian Magazine',url:'https://www.smithsonianmag.com/rss/latest_articles/',ed:'DESTAQUE',on:false},
+  // --- Cultura & lançamentos (PLANS) ---
+  {nome:'Variety',url:'https://variety.com/feed/',ed:'PLANS',on:false},
+  {nome:'Pitchfork',url:'https://pitchfork.com/feed/feed-news/rss',ed:'PLANS',on:false},
+  {nome:'IGN Brasil',url:'https://br.ign.com/feed.xml',ed:'PLANS',on:false},
 ];
 function renderFeeds(){
   document.getElementById('feed-list').innerHTML=FEEDS.map((f,i)=>
@@ -572,23 +693,80 @@ function renderItems(){
   const fEd=document.getElementById('filtro-editoria').value;
   const fSel=document.getElementById('filtro-sel').value;
   const fTx=document.getElementById('filtro-busca').value.toLowerCase();
-  const list=S.items.filter(i=>(!fEd||i.editoria===fEd)&&(!fSel||i.sel)&&(!fTx||(i.titulo+i.resumo).toLowerCase().includes(fTx)));
-  document.getElementById('items-list').innerHTML=list.map(i=>`
-    <div class="news-item ${i.sel?'selected':''}">
-      <input type="checkbox" ${i.sel?'checked':''} onchange="tgl(${i.id},'sel',this.checked)">
-      <div style="flex:1">
-        <div class="ttl">${i.link?`<a href="${esc(i.link)}" target="_blank">${esc(i.titulo)}</a>`:esc(i.titulo)}
-          <span class="pill ${i.editoria}">${ED_LABEL(i.editoria)}</span></div>
-        <div class="meta">${esc(i.fonte)}${i.data?' · '+fmtDate(i.data):''}</div>
-        ${i.resumo?`<div class="desc">${esc(i.resumo)}</div>`:''}
-      </div>
+  let list=S.items.filter(i=>(!fEd||i.editoria===fEd)&&(!fSel||i.sel)&&(!fTx||(i.titulo+i.resumo).toLowerCase().includes(fTx)));
+  list.sort((a,b)=>scoreItem(b)-scoreItem(a)); // preferências aprendidas primeiro
+  document.getElementById('items-list').innerHTML=list.map(itemRow).join('')||'<p class="hint">Nenhuma notícia — volte à aba Coleta.</p>';
+  const sel=S.items.filter(i=>i.sel).length;
+  setStatus('cur-status',sel+' selecionadas');
+}
+function itemRow(i){
+  if(i.editing) return itemEditRow(i);
+  const sc=scoreItem(i);
+  return `<div class="news-item ${i.sel?'selected':''}">
+    <input type="checkbox" ${i.sel?'checked':''} onchange="tgl(${i.id},'sel',this.checked)">
+    <div class="ni-main">
+      <div class="ttl">${esc(i.titulo)}</div>
+      <div class="meta"><span class="pill ${i.editoria}">${ED_LABEL(i.editoria)}</span> ${esc(i.fonte)}${i.data?' · '+fmtDate(i.data):''}${sc?` <span class="score-badge">afinidade ${sc>0?'+':''}${sc}</span>`:''}${i._new?' <span class="score-badge" style="color:var(--ok)">nova</span>':''}</div>
+      ${i.resumo?`<div class="desc">${esc(i.resumo)}</div>`:''}
+    </div>
+    <div class="ni-side">
       <select onchange="setEd(${i.id},this.value)">
         ${['DESTAQUE','UPDATES','REDES','NEWS','PLANS'].map(e=>`<option value="${e}" ${i.editoria===e?'selected':''}>${ED_LABEL(e)}</option>`).join('')}
       </select>
-      <span class="star ${i.star?'on':''}" title="matéria principal da editoria" onclick="setStar(${i.id})">⭐</span>
-    </div>`).join('')||'<p class="hint">Nenhuma notícia — volte à aba Coleta.</p>';
-  const sel=S.items.filter(i=>i.sel).length;
-  setStatus('cur-status',sel+' selecionadas');
+      <div class="ni-actions">
+        <button class="vote up ${i.vote===1?'on':''}" title="quero mais notícias assim" onclick="curaVote(${i.id},1)">👍</button>
+        <button class="vote down" title="não quero: troca por outra dos feeds" onclick="curaVote(${i.id},-1)">👎</button>
+        <span class="star ${i.star?'on':''}" title="matéria principal da editoria" onclick="setStar(${i.id})">⭐</span>
+      </div>
+      <div class="ni-actions">
+        ${i.link?`<a class="btn-sm acc" href="${esc(i.link)}" target="_blank">↗ Acessar</a>`:''}
+        <button class="btn-sm" onclick="editItem(${i.id})">✏️ Editar</button>
+      </div>
+    </div>
+  </div>`;
+}
+function itemEditRow(i){
+  return `<div class="news-item selected">
+    <div class="ni-main" style="width:100%">
+      <div class="ni-edit" data-edit="${i.id}">
+        <label>Assunto / título</label><input type="text" data-ek="titulo" value="${esc(i.titulo)}">
+        <label>Resumo</label><textarea data-ek="resumo">${esc(i.resumo||'')}</textarea>
+        <div class="row">
+          <div><label>Fonte</label><input type="text" data-ek="fonte" value="${esc(i.fonte||'')}"></div>
+          <div><label>Link</label><input type="text" data-ek="link" value="${esc(i.link||'')}"></div>
+        </div>
+        <div class="row-btns">
+          <button class="btn" onclick="saveItemEdit(${i.id})">Salvar</button>
+          <button class="btn sec" onclick="cancelEdit(${i.id})">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+function editItem(id){const i=S.items.find(x=>x.id===id);if(i){i.editing=true;renderItems();}}
+function cancelEdit(id){const i=S.items.find(x=>x.id===id);if(i){i.editing=false;renderItems();}}
+function saveItemEdit(id){
+  const i=S.items.find(x=>x.id===id);if(!i)return;
+  const box=document.querySelector(`[data-edit="${id}"]`);if(!box)return;
+  box.querySelectorAll('[data-ek]').forEach(inp=>{i[inp.dataset.ek]=inp.value;});
+  i.editing=false;renderItems();
+}
+async function curaVote(id,val){
+  const i=S.items.find(x=>x.id===id);if(!i)return;
+  if(val<0){
+    await recordVote(i,i.editoria,-1,'curadoria');
+    const ed=i.editoria;
+    S.items=S.items.filter(x=>x.id!==id);
+    renderItems();
+    setStatus('cur-status','👎 anotado. Buscando outra de '+ED_LABEL(ed)+'...');
+    const ok=await bringReplacement(ed);
+    renderItems();
+    setStatus('cur-status', ok?('Troquei por uma nova de '+ED_LABEL(ed)+'.'):('Sem mais notícias novas de '+ED_LABEL(ed)+' nos feeds.'), ok?'ok':'');
+  }else{
+    i.vote=1; await recordVote(i,i.editoria,1,'curadoria');
+    renderItems();
+    setStatus('cur-status','👍 anotado: a news vai priorizar notícias assim.','ok');
+  }
 }
 function tgl(id,k,v){const i=S.items.find(x=>x.id===id);i[k]=v;if(k==='sel'&&v===false)i.star=false;renderItems();}
 function setEd(id,v){const i=S.items.find(x=>x.id===id);i.editoria=v;i.star=false;renderItems();}
@@ -599,6 +777,217 @@ function setStar(id){
 }
 function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function fmtDate(d){const x=new Date(d);return isNaN(x)?'':x.toLocaleDateString('pt-BR');}
+
+/* ===================== INTELIGÊNCIA (votos + preferências) ===================== */
+const STOP=new Set(('a o e de da do das dos no na nos nas em um uma uns umas para pra por com sem que se ao aos as os mas como mais menos muito pouco nao sim sua seu suas seus este esta isso isto essa esse aquele aquela the of to in on for and or is are with from this that you your tem ter vai vao sobre entre apos ate pelo pela pelos pelas nova novo novas novos agora hoje semana ano anos dia dias ser foi sao seu').split(/\s+/));
+function tokenize(s){
+  return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ').split(/\s+/).filter(w=>w.length>3 && !STOP.has(w));
+}
+function itemKey(n){return String(n.link||n.titulo||'').toLowerCase().trim().slice(0,300);}
+
+let FEEDBACK=[];           // votos combinados (local + supabase)
+const PREF={};             // editoria -> {keyword: peso}
+const REJECTED=new Set();  // item_key dos thumbs down (não repor)
+
+function supaConfigured(){return !!(cfg('cfg-supa-url') && cfg('cfg-supa-key'));}
+function supaHeaders(){const k=cfg('cfg-supa-key');return {'apikey':k,'Authorization':'Bearer '+k};}
+function loadLocalFeedback(){
+  try{FEEDBACK=JSON.parse(localStorage.getItem('mab_feedback')||'[]');}catch(e){FEEDBACK=[];}
+  FEEDBACK.forEach(f=>{if(f.vote<0)REJECTED.add(f.item_key);});
+}
+function saveLocalFeedback(){try{localStorage.setItem('mab_feedback',JSON.stringify(FEEDBACK.slice(-1500)));}catch(e){}}
+function buildPrefs(){
+  for(const k in PREF)delete PREF[k];
+  const latest={};
+  FEEDBACK.forEach(f=>{const k=(f.editoria||'')+'|'+(f.item_key||f.titulo);
+    if(!latest[k] || (f.created_at||'')>(latest[k].created_at||'')) latest[k]=f;});
+  Object.values(latest).forEach(f=>{
+    const ed=f.editoria; if(!ed)return; PREF[ed]=PREF[ed]||{};
+    const kws=(f.keywords&&f.keywords.length)?f.keywords:tokenize(f.titulo);
+    kws.forEach(w=>{PREF[ed][w]=(PREF[ed][w]||0)+(f.vote||0);});
+  });
+}
+function scoreItem(n){
+  const w=PREF[n.editoria]; if(!w)return 0;
+  let s=0; tokenize((n.titulo||'')+' '+(n.resumo||'')).forEach(t=>{if(w[t])s+=w[t];});
+  return s;
+}
+function lastVote(k,ed){let r=0,t='';FEEDBACK.forEach(f=>{if(f.item_key===k&&f.editoria===ed&&(f.created_at||'')>=t){t=f.created_at||'';r=f.vote;}});return r;}
+async function recordVote(n,ed,val,context){
+  const row={item_key:itemKey(n),editoria:ed,vote:val,titulo:n.titulo||'',fonte:n.fonte||'',
+    link:n.link||'',resumo:n.resumo||'',keywords:tokenize(n.titulo),context:context||'curadoria',
+    created_at:new Date().toISOString()};
+  FEEDBACK.push(row); if(val<0)REJECTED.add(row.item_key);
+  saveLocalFeedback(); buildPrefs();
+  if(supaConfigured()){
+    try{
+      const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+      await fetch(url+'/rest/v1/feedback',{method:'POST',
+        headers:{'Content-Type':'application/json','Prefer':'return=minimal',...supaHeaders()},
+        body:JSON.stringify({item_key:row.item_key,editoria:row.editoria,vote:row.vote,titulo:row.titulo,
+          fonte:row.fonte,link:row.link,resumo:row.resumo,keywords:row.keywords,context:row.context})});
+    }catch(e){/* offline: fica só no localStorage */}
+  }
+}
+async function supaSyncPrefs(){
+  if(!supaConfigured())return;
+  try{
+    const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+    const r=await fetch(url+'/rest/v1/feedback?select=item_key,editoria,vote,titulo,keywords,created_at,context&order=created_at.desc&limit=3000',{headers:supaHeaders()});
+    if(!r.ok)return;
+    const data=await r.json();
+    const seen=new Set(FEEDBACK.map(f=>(f.created_at||'')+'|'+(f.item_key||'')));
+    data.forEach(f=>{const k=(f.created_at||'')+'|'+(f.item_key||''); if(!seen.has(k)){seen.add(k);FEEDBACK.push(f);if(f.vote<0)REJECTED.add(f.item_key);}});
+    saveLocalFeedback(); buildPrefs();
+  }catch(e){}
+}
+function resetPrefs(){
+  if(!confirm('Isso apaga o aprendizado salvo NESTE navegador (não apaga o Supabase). Continuar?'))return;
+  FEEDBACK=[];REJECTED.clear();saveLocalFeedback();buildPrefs();
+  setStatus('dash-status','Aprendizado local limpo.','ok');renderDashboard();
+}
+function prefSummary(ed){
+  const w=PREF[ed]; if(!w)return '';
+  const arr=Object.entries(w).filter(([k,v])=>v!==0).sort((a,b)=>b[1]-a[1]);
+  if(!arr.length)return '';
+  const up=arr.filter(x=>x[1]>0).slice(0,6).map(x=>`<span class="kw">👍 ${esc(x[0])}</span>`).join('');
+  const dn=arr.filter(x=>x[1]<0).slice(-6).reverse().map(x=>`<span class="kw">👎 ${esc(x[0])}</span>`).join('');
+  if(!up&&!dn)return '';
+  return `<div class="prefbox">A news aprendeu pra <b>${ED_LABEL(ed)}</b>: ${up||'<i>(nada ainda)</i>'} ${dn}</div>`;
+}
+
+/* ===================== REPOSIÇÃO (thumbs down na curadoria) ===================== */
+async function fetchMoreForEditoria(ed,days,sink){
+  const tasks=[];
+  FEEDS.filter(f=>f.ed===ed).forEach(f=>tasks.push((async()=>{
+    try{const xml=await fetchWithProxy(f.url);sink(recentOnly(parseRss(xml,f.nome,f.ed),days));}catch(e){}
+  })()));
+  (GN_QUERIES[ed]||[]).forEach(u=>tasks.push((async()=>{
+    try{const xml=await fetchWithProxy(u);sink(recentOnly(parseGNews(xml,ed),days));}catch(e){}
+  })()));
+  await Promise.allSettled(tasks);
+}
+function isKnownNews(n){
+  const k=itemKey(n);
+  if(!k||REJECTED.has(k))return true;
+  if(S.items.some(x=>itemKey(x)===k))return true;
+  if(S.reserve.some(x=>itemKey(x)===k))return true;
+  return false;
+}
+function pushReserve(arr){arr.forEach(n=>{if(!isKnownNews(n))S.reserve.push(n);});}
+function pickReserve(ed){
+  let best=-1,bd=-Infinity;
+  S.reserve.forEach((n,i)=>{if(n.editoria!==ed)return;const d=Date.parse(n.data)||0;if(d>=bd){bd=d;best=i;}});
+  return best>=0?S.reserve.splice(best,1)[0]:null;
+}
+function addReplacement(n){S.items.push({id:_id++,sel:false,star:false,vote:0,_new:true,...n});}
+async function bringReplacement(ed){
+  let n=pickReserve(ed);
+  if(n){addReplacement(n);return true;}
+  for(const days of [15,30,60,120,3650]){ // supera os 7 dias quando os feeds recentes acabam
+    await fetchMoreForEditoria(ed,days,pushReserve);
+    n=pickReserve(ed);
+    if(n){addReplacement(n);return true;}
+  }
+  return false;
+}
+
+/* ===================== DASHBOARD ===================== */
+let _dashLoading=false;
+async function loadDashboard(){
+  if(_dashLoading)return; _dashLoading=true;
+  setStatus('dash-status',' carregando aprendizado...'); await supaSyncPrefs();
+  setStatus('dash-status','Buscando notícias em alta...');
+  document.getElementById('dash-log').textContent='';
+  S.trending={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
+  const seen=new Set();
+  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k))return;seen.add(k);(S.trending[n.editoria]||(S.trending[n.editoria]=[])).push(n);});
+  await Promise.allSettled(FEEDS.map(async f=>{
+    try{const xml=await fetchWithProxy(f.url);add(recentOnly(parseRss(xml,f.nome,f.ed),14).slice(0,18));}
+    catch(e){log('dash-log',`✘ ${f.nome}`);}
+  }));
+  await Promise.allSettled(Object.entries(GN_QUERIES).map(async([ed,urls])=>{
+    for(const u of urls){try{const xml=await fetchWithProxy(u);add(recentOnly(parseGNews(xml,ed),14).slice(0,18));}catch(e){}}
+  }));
+  for(const ed of Object.keys(GN_QUERIES)){
+    let win=21;
+    while((S.trending[ed]||[]).length<10 && win<=120){await fetchMoreForEditoria(ed,win,add);win+=40;}
+    log('dash-log',`${(S.trending[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(S.trending[ed]||[]).length}`);
+  }
+  _dashLoading=false; renderDashboard();
+  const total=Object.values(S.trending).reduce((a,b)=>a+b.length,0);
+  setStatus('dash-status',`${total} notícias em alta`,'ok');
+}
+function renderDashboard(){
+  const host=document.getElementById('dash-blocks'); if(!host)return;
+  const eds=['DESTAQUE','UPDATES','REDES','NEWS','PLANS'];
+  if(eds.every(ed=>!(S.trending[ed]||[]).length)){
+    host.innerHTML='<div class="card"><p class="hint">Clique em <b>Carregar / atualizar tendências</b> para ver as notícias em alta de cada editoria.</p></div>';return;
+  }
+  host.innerHTML=eds.map(ed=>{
+    const list=(S.trending[ed]||[]).slice().sort((a,b)=>scoreItem(b)-scoreItem(a)).slice(0,12);
+    return `<div class="card">
+      <h2>${ED_LABEL(ed)} <span class="pill ${ed}">${list.length}</span></h2>
+      ${prefSummary(ed)}
+      ${list.map(n=>dashRow(ed,n)).join('')||'<p class="hint">Sem notícias nesta editoria.</p>'}
+    </div>`;
+  }).join('');
+}
+function dashRow(ed,n){
+  const k=itemKey(n), v=lastVote(k,ed), sc=scoreItem(n);
+  return `<div class="news-item">
+    <div class="ni-main">
+      <div class="ttl">${esc(n.titulo)}</div>
+      <div class="meta">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${sc?` <span class="score-badge">afinidade ${sc>0?'+':''}${sc}</span>`:''}</div>
+      ${n.resumo?`<div class="desc">${esc(n.resumo)}</div>`:''}
+    </div>
+    <div class="ni-side">
+      <div class="ni-actions">
+        <button class="vote up ${v===1?'on':''}" title="quero mais notícias assim" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',1)">👍</button>
+        <button class="vote down ${v===-1?'on':''}" title="não quero esse tipo" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',-1)">👎</button>
+      </div>
+      ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank">↗ Acessar</a>`:''}
+    </div>
+  </div>`;
+}
+function findTrending(k){for(const ed in S.trending){const n=(S.trending[ed]||[]).find(x=>itemKey(x)===k);if(n)return n;}return null;}
+async function voteDash(btn,ed,kEnc,val){
+  const k=decodeURIComponent(kEnc);
+  const n=findTrending(k)||{titulo:'',link:k,editoria:ed};
+  btn.classList.remove('bump');void btn.offsetWidth;btn.classList.add('bump');
+  btn.parentElement.querySelectorAll('.vote').forEach(b=>b.classList.remove('on')); btn.classList.add('on');
+  await recordVote(n,ed,val,'dashboard');
+  const card=btn.closest('.card'); const pb=card.querySelector('.prefbox'); const html=prefSummary(ed);
+  if(pb){pb.outerHTML=html;} else if(html){card.querySelector('h2').insertAdjacentHTML('afterend',html);}
+}
+
+/* ===================== GALERIA DE IMAGENS (Openverse, grátis) ===================== */
+async function openverse(k){
+  const cont=document.getElementById('ov-'+k); if(!cont)return;
+  const term=(document.getElementById('ovq-'+k)?.value||'').trim();
+  if(!term){cont.innerHTML='<p class="hint">Digite um termo de busca.</p>';return;}
+  cont.innerHTML='<span class="status"><span class="spin"></span>buscando imagens no Openverse...</span>';
+  try{
+    const r=await fetch('https://api.openverse.org/v1/images/?q='+encodeURIComponent(term)+'&page_size=12&mature=false');
+    const j=await r.json();
+    const imgs=(j.results||[]);
+    if(!imgs.length){cont.innerHTML=`<p class="hint">Nada encontrado para "${esc(term)}". Tente outro termo.</p>`;return;}
+    const cur=S.edition?.imagens?.[k]||'';
+    cont.innerHTML=imgs.map(im=>{
+      const full=im.url||im.thumbnail||'';
+      return `<img class="ov-thumb ${full===cur?'sel':''}" loading="lazy" src="${esc(im.thumbnail||full)}" title="${esc((im.title||'')+' · '+(im.source||''))}" onclick="pickImage('${k}','${encodeURIComponent(full)}',this)" onerror="this.style.display='none'">`;
+    }).join('');
+  }catch(e){cont.innerHTML='<p class="hint">Erro ao buscar no Openverse: '+esc(e.message)+'</p>';}
+}
+function pickImage(k,enc,el){
+  const url=decodeURIComponent(enc);
+  setPath(S.edition,'imagens.'+k,url);
+  const inp=document.querySelector(`input[data-p="imagens.${k}"]`); if(inp)inp.value=url;
+  const im=document.querySelector(`img[data-thumb="${k}"]`); if(im){im.src=url;im.style.display='';}
+  document.querySelectorAll('#ov-'+k+' .ov-thumb').forEach(t=>t.classList.remove('sel'));
+  if(el)el.classList.add('sel');
+}
 
 /* ===================== GERAÇÃO ===================== */
 const GUIA=`Você é o redator oficial da "Make a Break", a newsletter semanal da Make (Make ID Comunicação Inteligente), para profissionais de marketing, comunicação, tecnologia, negócios e cultura digital no Brasil.
@@ -613,7 +1002,7 @@ REGRA MAIS IMPORTANTE: a Make a Break NÃO replica notícias — ela TRADUZ RELE
 
 ESTILO DOS TÍTULOS (exemplos reais da news): "ELA ATÉ QUE TEM SE ESFORÇADO, MAS AINDA TÁ LONGE DA 'META'" (sobre a IA da Meta), "PREPARE-SE PARA A MONTANHA-RUSSA DA MÍDIA EM 2025", "BROMANCE, AÇÃO E RISADAS: TÁ PRONTO PRA ÚLTIMA RODADA?" (sobre Venom 3), "A BOLA DO JOGO É O DIGITAL". Sempre em caixa alta, com trocadilho ou referência pop ligada à notícia.
 
-ESTILO DAS MATÉRIAS: um parágrafo único de 4 a 6 frases, conversacional, terminando muitas vezes com uma pergunta ou provocação leve pro leitor ("Vai assistir?", "Preparado para o impacto?").
+ESTILO DAS MATÉRIAS: SEMPRE três parágrafos, cada um com até 5 linhas (textos curtos de um parágrafo só estão PROIBIDOS). Separe os parágrafos com uma linha em branco. Primeiro parágrafo: contextualiza a notícia de forma leve. Segundo: traduz a relevância (por que importa, o que muda, que tendência revela, como mexe com marketing/comunicação/negócios/comportamento). Terceiro: fecha com um gancho conversacional, uma referência pop ou uma provocação leve pro leitor ("Vai assistir?", "Preparado para o impacto?"). Conversacional do começo ao fim.
 
 ESTILO DOS BULLETS: frase única, direta, começando com um emoji que combine com o assunto. Ex.: "🤖 O primeiro beta do iOS 18.2 chegou, e trouxe mais funções baseadas em I.A."
 
@@ -623,7 +1012,15 @@ SENSAÇÕES POR EDITORIA — UPDATES: "isso pode me ajudar profissionalmente". N
 
 ESTILO DAS ABERTURAS (exemplos reais): "Boa tarde, pessu!", "Boa tarde, Barbies e Oppenheimers!", "Hoje é sexta-feira-útil, mas não temas! Semana que vem tem mais (feriado).", "De 4 em 4 anos a gente esquece um pouco dos problemas e vive o esporte de uma maneira diferente." — sempre curta, contextual e terminando com convite pro break ("Boa leitura!", "vem tirar uns minutinhos de folga comigo :)").
 
-A NEWS TEM PERSONALIDADE PRÓPRIA: às vezes fala de si em primeira pessoa, como uma amiga que chega ("se prepare, eu cheguei", "Hoje eu tô de parabéns!"). Apelidos carinhosos para figuras conhecidas são bem-vindos ("tio Zuck", "tio Mark", "menino Ney", "Reizinho" para Harry Styles).`;
+A NEWS TEM PERSONALIDADE PRÓPRIA: às vezes fala de si em primeira pessoa, como uma amiga que chega ("se prepare, eu cheguei", "Hoje eu tô de parabéns!"). Apelidos carinhosos para figuras conhecidas são bem-vindos ("tio Zuck", "tio Mark", "menino Ney", "Reizinho" para Harry Styles).
+
+REGRAS DE ESCRITA (O TEXTO NÃO PODE PARECER ESCRITO POR IA) — siga à risca:
+- PROIBIDO usar travessão (— ou –) em qualquer lugar. No lugar, use vírgula, ponto, dois-pontos, parênteses ou reticências.
+- PROIBIDO a estrutura "não é (apenas/só) X, é Y" e variações ("mais do que X, é Y", "não se trata de X, e sim de Y", "isso não é X. É Y."). Escreva de forma direta, sem essa fórmula de contraste.
+- PROIBIDO clichês e muletas de IA, entre eles: "Em um mundo cada vez mais", "No cenário atual", "Em suma", "Em resumo", "Por fim", "Em última análise", "Vale ressaltar", "Vale destacar", "Vale lembrar", "É importante notar", "Você já parou para pensar", "prepare-se para", "revolucionar", "revolucionário", "game changer", "divisor de águas", "robusto", "mergulhar fundo", "desvendar", "potencializar", "alavancar", "sinergia", "transformador", "imersivo", "elevar a um novo patamar", "do zero ao topo", "abrir um leque".
+- PROIBIDO conectivos pomposos ("ademais", "outrossim", "destarte", "por conseguinte", "consequentemente") e repetir "além disso".
+- EVITE excesso de advérbios em -mente, adjetivação vazia e frases simétricas em série. Varie o tamanho das frases. Pode começar frase com "E", "Mas", "Aí".
+- Escreva como um brasileiro esperto e bem-humorado conversando com um amigo: gírias leves, humor, perguntas diretas ao leitor e referência pop quando couber.`;
 
 const TIPO_INSTR={
   padrao:'',
@@ -656,18 +1053,25 @@ PLANS:\n${byEd.PLANS.map(fmt).join('\n')||'(nenhuma)'}
 
 Em cada editoria, a notícia marcada [PRINCIPAL] (ou a mais forte, se nenhuma estiver marcada) vira a matéria longa; as demais viram bullets com emoji. Inclua o link da notícia em cada bullet quando houver.
 
+LEMBRE DAS REGRAS DE ESCRITA: cada "texto" de matéria tem SEMPRE três parágrafos de até 5 linhas, separados por uma linha em branco (\\n\\n). Nada de travessão, nada da fórmula "não é X, é Y", nada de clichê de IA.
+
+O CAMPO "assunto" É O MAIS IMPORTANTE (é o que faz o leitor abrir o e-mail). Capriche:
+- Curto (4 a 8 palavras), curioso, com humor ou trocadilho ligado à matéria de DESTAQUE da semana.
+- Pode falar em primeira pessoa (a news é uma pessoa), provocar, criar suspense ou usar o placeholder __NOME__ no começo.
+- SEM emoji, SEM travessão, SEM clickbait sensacionalista ("você não vai acreditar").
+- Capte o tom destes assuntos REAIS da Make a Break (NÃO copie, inspire-se): "__NOME__, você tá demorando muito...", "Um minutinho da sua atenção. Ou mais!", "Ai eu tô muito Olímpica", "Hoje é um dia especial", "Hoje eu tô de parabéns", "__NOME__, você perdeu o prazo!", "Parabéns, __NOME__!", "__NOME__, se prepare eu cheguei!".
+
 Responda SOMENTE com JSON válido neste formato exato:
 {
- "assunto": "assunto do e-mail, curto e trocadilhado (pode usar __NOME__ como placeholder do primeiro nome)",
- "preheader": "frase curta de apoio ao assunto",
+ "assunto": "assunto do e-mail seguindo as regras acima (pode usar __NOME__ como placeholder do primeiro nome)",
  "highlights": ["3 manchetes curtíssimas pro banner inicial"],
- "intro": {"saudacao":"saudação criativa ligada ao tema da semana (ex.: 'Boa tarde, Barbies e Oppenheimers!')","texto":"2-4 frases de abertura convidando pro break"},
- "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"parágrafo de 4-6 frases","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
- "updates": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo da matéria principal","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
+ "intro": {"saudacao":"saudação criativa ligada ao tema da semana (ex.: 'Boa tarde, Barbies e Oppenheimers!')","texto":"2 a 4 frases curtas de abertura convidando pro break"},
+ "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
+ "updates": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
  "redes": {"titulo":"TÍTULO CURTO E ESPERTO PRO BLOCO DE REDES","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]},
- "news": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
- "plans": {"titulo":"TÍTULO CAIXA ALTA","texto":"parágrafo","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
- "fechamento": "1 frase simpática de despedida"${tipo==='campanha'?',\n "campanha": {"titulo":"título curto do box da campanha","texto":"2-4 frases informativas e acolhedoras sobre a causa"}':''}
+ "news": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
+ "plans": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
+ "fechamento": "1 frase simpática de despedida"${tipo==='campanha'?',\n "campanha": {"titulo":"título curto do box da campanha","texto":"2 a 4 frases informativas e acolhedoras sobre a causa"}':''}
 }`;
 }
 
@@ -694,6 +1098,7 @@ async function generateEdition(regen){
     if(j.error) throw new Error(j.error.message);
     const imgsAntes=S.edition?.imagens; // preserva URLs de imagem ao regenerar
     S.edition=JSON.parse(j.choices[0].message.content);
+    normalizeEdition(S.edition);
     S.edition.imagens=Object.assign({banner:'',updates:'',redes:'',news:'',plans:''},imgsAntes||{});
     setStatus('gen-status','Edição gerada! Revise abaixo.','ok');
     renderEditor();
@@ -702,6 +1107,25 @@ async function generateEdition(regen){
     log('gen-log','✘ '+e.message);
   }
   document.getElementById('btn-gerar').disabled=false;
+}
+
+/* Normaliza o JSON do GPT: junta parágrafos em array e remove travessões que escaparem. */
+function normalizeEdition(e){
+  if(!e)return;
+  const noDash=s=>typeof s==='string'?s.replace(/\s*[—–]\s*/g,', ').replace(/[—–]/g,'-'):s;
+  ['destaque','updates','news','plans'].forEach(sec=>{
+    if(!e[sec])return;
+    if(Array.isArray(e[sec].texto)) e[sec].texto=e[sec].texto.filter(Boolean).join('\n\n');
+    if(typeof e[sec].texto==='string') e[sec].texto=noDash(e[sec].texto);
+    if(e[sec].titulo) e[sec].titulo=noDash(e[sec].titulo);
+    (e[sec].bullets||[]).forEach(b=>{if(b&&b.texto)b.texto=noDash(b.texto);});
+  });
+  if(e.redes){if(e.redes.titulo)e.redes.titulo=noDash(e.redes.titulo);(e.redes.bullets||[]).forEach(b=>{if(b&&b.texto)b.texto=noDash(b.texto);});}
+  if(e.intro){if(Array.isArray(e.intro.texto))e.intro.texto=e.intro.texto.join('\n');if(e.intro.texto)e.intro.texto=noDash(e.intro.texto);if(e.intro.saudacao)e.intro.saudacao=noDash(e.intro.saudacao);}
+  if(e.assunto)e.assunto=noDash(e.assunto);
+  if(e.fechamento)e.fechamento=noDash(e.fechamento);
+  if(Array.isArray(e.highlights))e.highlights=e.highlights.map(noDash);
+  if(e.campanha){if(e.campanha.texto)e.campanha.texto=noDash(e.campanha.texto);if(e.campanha.titulo)e.campanha.titulo=noDash(e.campanha.titulo);}
 }
 
 /* ===================== EDITOR ===================== */
@@ -715,10 +1139,16 @@ function renderEditor(){
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" data-p="imagens.${k}" value="${esc(e.imagens?.[k]||'')}" placeholder="URL da imagem hospedada (biblioteca do RD Station, Imgur, seu site...)">
       <img class="thumb" data-thumb="${k}" src="${esc(e.imagens?.[k]||'')}" onerror="this.style.display='none'" ${e.imagens?.[k]?'':'style="display:none"'}>
-    </div></div>`;
+    </div>
+    <div class="ov-tools">
+      <input type="text" id="ovq-${k}" value="${esc(sug||'')}" placeholder="termo de busca da imagem">
+      <button class="btn-sm" type="button" onclick="openverse('${k}')">🖼️ Buscar sugestões</button>
+    </div>
+    <div class="ov-gallery" id="ov-${k}"></div></div>`;
   document.getElementById('editor').innerHTML=`
     ${fld('assunto','Assunto do e-mail',e.assunto)}
-    ${fld('preheader','Preheader',e.preheader)}
+    <div class="ed-field"><label>Pre-header <span style="color:var(--muted);font-weight:400">· fixo no padrão da Make</span></label>
+      <input type="text" readonly value="${esc('Ano '+cfg('cfg-ano')+' - Edição #'+cfg('cfg-edicao')+' - A Newsletter da Make')}"></div>
     <div class="ed-sec"><h3>🖼️ Imagens da edição</h3>
       <p class="hint">Como na referência: uma imagem de abertura (banner do destaque) e uma por editoria. Cole URLs de imagens hospedadas — para o envio real, suba na biblioteca de imagens do RD Station e copie o link de lá (e-mail não aceita imagem local).</p>
       ${imgRow('banner','Banner / Destaque',e.destaque?.sugestao_imagem)}
@@ -809,13 +1239,18 @@ function mailBullets(arr){
       ${esc(b.emoji)}&nbsp; ${b.link?`<a href="${esc(b.link)}" target="_blank" style="color:${M.linkColor};text-decoration:underline;">${esc(b.texto)}</a>`:esc(b.texto)}
     </td></tr>`).join('')}</table>`;
 }
+function mailParas(texto){
+  // quebra "texto" em parágrafos (separados por linha em branco) e renderiza um <p> por parágrafo
+  return String(texto||'').split(/\n{2,}/).map(p=>p.trim()).filter(Boolean).map(p=>
+    `<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
+}
 function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets,img){
   return `
   <tr><td style="padding:28px 32px 0;">
     ${img?`<img src="${esc(img)}" width="536" alt="${esc(titulo||tag||'')}" style="display:block;width:100%;height:auto;border-radius:8px;margin-bottom:12px;">`:''}
     ${tag?`<span style="display:inline-block;background:${tagColor};color:${onColor(tagColor)};font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;padding:3px 10px;">${tag}</span>`:''}
     ${titulo?`<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${esc(titulo)}</h2>`:''}
-    ${texto?`<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(texto)}</p>`:''}
+    ${texto?mailParas(texto):''}
     ${bulletsLabel&&bullets&&bullets.length?`<p style="margin:14px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#111;">${bulletsLabel}</p>${mailBullets(bullets)}`:''}
   </td></tr>`;
 }
@@ -856,7 +1291,7 @@ function buildEmailHtml(){
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${esc(rep(e.assunto))}</title></head>
 <body style="margin:0;padding:0;background:#f2f2f2;">
-<div style="display:none;max-height:0;overflow:hidden;">${esc(rep(e.preheader||''))}</div>
+<div style="display:none;max-height:0;overflow:hidden;">Ano ${esc(ano)} - Edição #${esc(ed)} - A Newsletter da Make</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f2f2f2;"><tr><td align="center" style="padding:18px 8px;">
 <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;">
 
@@ -880,7 +1315,7 @@ function buildEmailHtml(){
   <!-- abertura -->
   <tr><td style="padding:28px 32px 0;">
     <p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#111;">${esc(rep(e.intro?.saudacao||''))}</p>
-    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(rep(e.intro?.texto||''))}</p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(rep(e.intro?.texto||'')).replace(/\n/g,'<br>')}</p>
   </td></tr>
 
   ${boxCampanha}
@@ -940,6 +1375,10 @@ async function copyText(){
   await navigator.clipboard.writeText(t);
   setStatus('exp-status','Texto copiado!','ok');
 }
+
+/* ===================== INIT ===================== */
+loadLocalFeedback(); buildPrefs(); renderDashboard();
+supaSyncPrefs().then(()=>{ if(document.getElementById('tab-dashboard').classList.contains('active')) renderDashboard(); });
 </script>
 </body>
 </html>
