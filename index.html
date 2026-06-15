@@ -555,6 +555,10 @@ function looksEnglish(s){
   let e=0,p=0; EN.forEach(w=>{if(t.includes(w))e++;}); PT.forEach(w=>{if(t.includes(w))p++;});
   return e>=2 && e>p;
 }
+// descarta conteúdo de venda/promoção/ofertas (não é pauta da news)
+function deacc(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
+const PROMO_RE=/(promoc|em promo|\bofertas?\b|ofertao|\bdescont(o|os|ao|oes)|\bcupom\b|cupons|pechinch|frete gratis|queima de estoque|saldao|menor preco|mais barat[oa]|preco .{0,25}(cai|caiu|despenc|baix|menor)|(caiu?|despencou|baixou|despencaram) .{0,25}(de )?(preco|valor|r\$)|black friday|cyber monday|\d+\s?%\s?(off|de desconto)|parcelad|a venda por|sai por r\$|por apenas r\$|por r\$\s?\d|de r\$\s?[\d.,]+\s?por|achadinh|melhores (ofertas|precos)|onde comprar|vale a pena comprar|leve \d+ pague)/;
+function isPromo(n){const s=deacc((n&&n.titulo||'')+' '+(n&&n.resumo||''));return PROMO_RE.test(s);}
 // fetch que aceita respostas curtas (direto e, se falhar, pelos proxies de CORS)
 async function fetchTextAny(url){
   try{const r=await fetch(url,{signal:AbortSignal.timeout(12000)});if(r.ok){const t=await r.text();if(t)return t;}}catch(e){}
@@ -618,6 +622,7 @@ function recentOnly(items,days){
 }
 function addItems(arr){
   arr.forEach(n=>{
+    if(isPromo(n)) return;                                       // descarta oferta/promoção
     if(S.items.some(x=>x.link===n.link&&n.link)) return;        // dedup por link
     if(S.items.some(x=>x.titulo.toLowerCase()===n.titulo.toLowerCase())) return;
     S.items.push({id:_id++,sel:false,star:false,...n});
@@ -756,7 +761,7 @@ async function gptSearch(){
   if(tipo==='especial'&&tipoTema) tipoInstr=` Esta é uma edição especial sobre "${tipoTema}": priorize notícias ligadas a esse tema quando existirem.`;
   if(tipo==='campanha'&&tipoTema) tipoInstr=` Se encontrar notícia recente ligada à campanha "${tipoTema}", inclua.`;
   const mkPrompt=(ed)=>`Pesquise na web e devolva ${ED_BRIEF[ed]}. Apenas notícias REAIS dos últimos 7 dias. OBRIGATÓRIO: título e resumo escritos EM PORTUGUÊS DO BRASIL. NÃO devolva nada em inglês; se a fonte for internacional, traduza o título e o resumo para português antes de responder.${tipoInstr}
-PROIBIDO: política partidária, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
+PROIBIDO: ofertas, promoções, descontos, cupons, "preço caiu/baixou", listas de produtos para comprar, "onde comprar", "vale a pena comprar", review de produto pra venda, conteúdo de e-commerce (Amazon, Mercado Livre, Magalu, Shopee, AliExpress, Kabum). Também proibido: política partidária, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
 Prefira fontes brasileiras confiáveis e pouco inclinadas politicamente (Meio & Mensagem, B9, Adnews, Rock Content, Exame, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Superinteressante, G1, Hypeness, Rolling Stone Brasil, Omelete, Jovem Nerd, IGN Brasil).
 Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido, sem markdown:
 {"noticias":[{"titulo":"...","resumo":"1 frase factual","fonte":"veículo","link":"url"}]}`;
@@ -987,7 +992,7 @@ function isKnownNews(n){
   if(S.reserve.some(x=>itemKey(x)===k))return true;
   return false;
 }
-function pushReserve(arr){arr.forEach(n=>{if(!isKnownNews(n))S.reserve.push(n);});}
+function pushReserve(arr){arr.forEach(n=>{if(!isKnownNews(n)&&!isPromo(n))S.reserve.push(n);});}
 function pickReserve(ed){
   let best=-1,bd=-Infinity;
   S.reserve.forEach((n,i)=>{if(n.editoria!==ed)return;const d=Date.parse(n.data)||0;if(d>=bd){bd=d;best=i;}});
@@ -1042,7 +1047,7 @@ async function dashFromCache(){
     if(!r.ok)return;
     const rows=await r.json();
     const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]}; let maxU=0;
-    rows.forEach(n=>{ if(REJECTED.has(n.item_key))return; if(t[n.editoria])t[n.editoria].push(n);
+    rows.forEach(n=>{ if(REJECTED.has(n.item_key)||isPromo(n))return; if(t[n.editoria])t[n.editoria].push(n);
       const u=Date.parse(n.updated_at)||0; if(u>maxU)maxU=u; });
     if(rows.length){
       S.trending=t; _cacheTime=maxU||Date.now(); renderDashboard();
@@ -1057,7 +1062,7 @@ async function refreshDashboard(){
   const lg=document.getElementById('dash-log'); if(lg)lg.textContent='';
   const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
   const seen=new Set();
-  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k))return;seen.add(k);(t[n.editoria]||(t[n.editoria]=[])).push(n);});
+  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k)||isPromo(n))return;seen.add(k);(t[n.editoria]||(t[n.editoria]=[])).push(n);});
   await Promise.allSettled(FEEDS.map(async f=>{
     try{const xml=await fetchWithProxy(f.url);add(recentOnly(parseRss(xml,f.nome,f.ed),14).slice(0,18));}
     catch(e){log('dash-log',`✘ ${f.nome}`);}
