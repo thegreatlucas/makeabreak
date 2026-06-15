@@ -85,6 +85,33 @@ create policy "anon write feedback" on public.feedback for insert to anon with c
 
 Como funciona: cada voto extrai as palavras-chave do título e soma (+1/−1) um peso por editoria. As notícias são reordenadas por afinidade no Dashboard e na Curadoria, e itens com 👎 não voltam a aparecer.
 
+### Cache do Dashboard
+
+O Dashboard guarda as notícias em alta numa segunda tabela (`news_cache`), no estilo de um portal (foto, chamada e trecho do texto). Ele lê do cache na hora de abrir (rápido) e **se atualiza sozinho a cada 6 horas** puxando dos feeds — também dá para forçar pelo botão. Rode no SQL Editor:
+
+```sql
+create table if not exists public.news_cache (
+  item_key   text primary key,
+  editoria   text not null,
+  titulo     text not null,
+  fonte      text,
+  link       text,
+  resumo     text,
+  imagem     text,
+  data       timestamptz,
+  updated_at timestamptz not null default now(),
+  created_at timestamptz not null default now()
+);
+create index if not exists news_cache_editoria_idx on public.news_cache (editoria);
+create index if not exists news_cache_data_idx     on public.news_cache (data desc);
+alter table public.news_cache enable row level security;
+create policy "anon read news"   on public.news_cache for select to anon using (true);
+create policy "anon insert news" on public.news_cache for insert to anon with check (true);
+create policy "anon update news" on public.news_cache for update to anon using (true) with check (true);
+```
+
+> Auto-refresh é client-side: enquanto a página estiver aberta, ele checa a cada 30 min e repõe quando o cache passa de 6h; ao abrir o Dashboard, mostra o cache na hora e atualiza se estiver velho. Não há servidor/cron próprio (o site é estático no GitHub Pages).
+
 ## Guia Editorial (resumo embutido no prompt)
 
 Tom leve, conversacional, inteligente e bem-humorado. Pode: trocadilhos, referências pop, frases de efeito. Não pode: corporativês, clickbait, sensacionalismo, ironia agressiva. Assuntos proibidos: política partidária, tragédias, crimes, guerra, conteúdo adulto, fake news e fofoca. Toda notícia precisa responder: *por que isso importa? o que muda? o que isso revela de tendência?*

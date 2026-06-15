@@ -151,6 +151,21 @@
   .ov-thumb:hover{transform:scale(1.06);border-color:var(--cyan)}
   .ov-thumb.sel{border-color:var(--yellow);box-shadow:0 0 0 2px var(--yellow)}
 
+  /* ----- dashboard estilo portal ----- */
+  .portal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+  .portal-card{background:var(--panel2);border:1px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;animation:fadeUp .3s ease both;transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease}
+  .portal-card:hover{transform:translateY(-3px);border-color:var(--cyan);box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  .portal-card .ph{width:100%;height:150px;object-fit:cover;display:block;background:var(--panel)}
+  .portal-card .ph.imgfail{display:none}
+  .portal-card .ph-fallback{width:100%;height:150px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;letter-spacing:1px;color:rgba(255,255,255,.85);background:linear-gradient(135deg,#2a2d36,#1a1c22)}
+  .portal-card .body{padding:12px 14px;display:flex;flex-direction:column;gap:7px;flex:1}
+  .portal-card .src{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .portal-card .chamada{font-size:15px;font-weight:700;line-height:1.34;color:var(--text)}
+  .portal-card .excerpt{font-size:13px;color:var(--muted);line-height:1.5;flex:1}
+  .portal-card .pc-foot{display:flex;gap:6px;align-items:center;margin-top:6px}
+  .portal-card .pc-foot .spacer{flex:1}
+  .dash-meta{font-size:12px;color:var(--muted)}
+
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -176,9 +191,9 @@
 <section class="tab" id="tab-dashboard">
   <div class="card">
     <h2>📊 Dashboard de tendências <span class="tag">INTELIGENTE</span></h2>
-    <p class="hint">As notícias em alta de cada editoria (10+ por bloco). Dê 👍 no que tem a cara da Make e 👎 no que não tem: a news aprende suas preferências por editoria e passa a priorizar o que você curte, aqui e na Curadoria.</p>
+    <p class="hint">As notícias em alta de cada editoria (10+ por bloco), no estilo de um portal: foto, chamada e um trecho do texto. As notícias ficam em cache no Supabase e se atualizam sozinhas a cada 6 horas (também dá pra forçar pelo botão). Dê 👍 no que tem a cara da Make e 👎 no que não tem: a news aprende suas preferências por editoria e passa a priorizar o que você curte, aqui e na Curadoria.</p>
     <div class="toolbar">
-      <button class="btn" onclick="loadDashboard()">🔄 Carregar / atualizar tendências</button>
+      <button class="btn" onclick="loadDashboard(true)">🔄 Carregar / atualizar tendências</button>
       <button class="btn sec" onclick="resetPrefs()" title="Zera tudo que a news aprendeu">🧹 Limpar aprendizado</button>
       <div class="spacer"></div>
       <span class="status" id="dash-status"></span>
@@ -402,7 +417,7 @@ function go(tab){
   document.querySelectorAll('nav.steps button').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+tab));
   if(tab==='curadoria') renderItems();
-  if(tab==='dashboard') renderDashboard();
+  if(tab==='dashboard') openDashboard();
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav.steps button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
@@ -505,18 +520,28 @@ async function fetchWithProxy(url){
   }
   throw new Error('todas as tentativas falharam');
 }
+function firstImage(it,html){
+  const attr=(tag,a)=>{const n=it.getElementsByTagName(tag);for(let i=0;i<n.length;i++){const u=n[i].getAttribute(a);if(u)return u;}return '';};
+  let u=attr('media:thumbnail','url');
+  if(!u){const mc=it.getElementsByTagName('media:content');for(let i=0;i<mc.length;i++){const url=mc[i].getAttribute('url')||'',med=mc[i].getAttribute('medium')||'',ty=mc[i].getAttribute('type')||'';if(url&&(med==='image'||ty.startsWith('image')||/\.(jpe?g|png|webp|gif)(\?|$)/i.test(url))){u=url;break;}}}
+  if(!u){const en=it.getElementsByTagName('enclosure');for(let i=0;i<en.length;i++){const url=en[i].getAttribute('url')||'',ty=en[i].getAttribute('type')||'';if(url&&(ty.startsWith('image')||/\.(jpe?g|png|webp|gif)(\?|$)/i.test(url))){u=url;break;}}}
+  if(!u){const m=/<img[^>]+src=["']([^"']+)["']/i.exec(html||'');if(m)u=m[1];}
+  return u||'';
+}
 function parseRss(xmlText,fonte,editoria){
   const doc=new DOMParser().parseFromString(xmlText,'text/xml');
   const out=[];
   const get=(el,tag)=>{const n=el.getElementsByTagName(tag)[0];return n?n.textContent.trim():'';};
   // RSS 2.0
   doc.querySelectorAll('item').forEach(it=>{
-    out.push({titulo:get(it,'title'),link:get(it,'link'),resumo:stripHtml(get(it,'description')).slice(0,300),data:get(it,'pubDate'),fonte,editoria});
+    const desc=get(it,'description'), enc=get(it,'content:encoded'), html=enc||desc;
+    out.push({titulo:get(it,'title'),link:get(it,'link'),resumo:stripHtml(desc||enc).slice(0,320),data:get(it,'pubDate'),fonte,editoria,imagem:firstImage(it,html)});
   });
   // Atom
   if(!out.length) doc.querySelectorAll('entry').forEach(it=>{
     const l=it.querySelector('link');
-    out.push({titulo:get(it,'title'),link:l?(l.getAttribute('href')||''):'',resumo:stripHtml(get(it,'summary')||get(it,'content')).slice(0,300),data:get(it,'updated')||get(it,'published'),fonte,editoria});
+    const html=get(it,'content')||get(it,'summary');
+    out.push({titulo:get(it,'title'),link:l?(l.getAttribute('href')||''):'',resumo:stripHtml(get(it,'summary')||get(it,'content')).slice(0,320),data:get(it,'updated')||get(it,'published'),fonte,editoria,imagem:firstImage(it,html)});
   });
   return out.filter(i=>i.titulo);
 }
@@ -576,7 +601,8 @@ function parseGNews(xmlText,editoria){
     const fonte=get('source')||'Google Notícias';
     // Google News põe " - Veículo" no fim do título
     if(fonte&&titulo.endsWith(' - '+fonte)) titulo=titulo.slice(0,-(fonte.length+3));
-    out.push({titulo,link:get('link'),resumo:'',data:get('pubDate'),fonte:fonte+' · Google News',editoria});
+    const desc=get('description');
+    out.push({titulo,link:get('link'),resumo:stripHtml(desc).slice(0,320),data:get('pubDate'),fonte:fonte+' · Google News',editoria,imagem:firstImage(it,desc)});
   });
   return out.filter(i=>i.titulo);
 }
@@ -904,16 +930,55 @@ async function bringReplacement(ed){
   return false;
 }
 
-/* ===================== DASHBOARD ===================== */
-let _dashLoading=false;
-async function loadDashboard(){
+/* ===================== DASHBOARD (cache no Supabase + auto-refresh 6h) ===================== */
+const SIX_H=6*3600*1000;
+let _dashLoading=false, _dashLoaded=false, _cacheTime=0;
+
+async function openDashboard(){
+  renderDashboard();
+  if(_dashLoaded)return; _dashLoaded=true;
+  await loadDashboard(false);
+}
+// botão "Atualizar" chama com force=true; o auto-refresh chama com force=false
+async function loadDashboard(force){
   if(_dashLoading)return; _dashLoading=true;
-  setStatus('dash-status',' carregando aprendizado...'); await supaSyncPrefs();
-  setStatus('dash-status','Buscando notícias em alta...');
-  document.getElementById('dash-log').textContent='';
-  S.trending={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
+  try{
+    await supaSyncPrefs();
+    if(!force) await dashFromCache();
+    const empty=Object.values(S.trending).every(a=>!a.length);
+    const stale=force||empty||!_cacheTime||(Date.now()-_cacheTime>SIX_H);
+    if(stale) await refreshDashboard();
+    else setStatus('dash-status','Do cache · atualizado '+cacheAgeLabel(),'ok');
+  }finally{ _dashLoading=false; }
+}
+function cacheAgeLabel(){
+  if(!_cacheTime)return '';
+  const min=Math.round((Date.now()-_cacheTime)/60000);
+  if(min<1)return 'agora mesmo';
+  if(min<60)return 'há '+min+' min';
+  return 'há '+Math.round(min/60)+'h';
+}
+// lê o cache de notícias do Supabase (rápido: evita puxar os feeds toda hora)
+async function dashFromCache(){
+  if(!supaConfigured())return;
+  try{
+    const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+    const r=await fetch(url+'/rest/v1/news_cache?select=item_key,editoria,titulo,fonte,link,resumo,imagem,data,updated_at&order=data.desc.nullslast&limit=600',{headers:supaHeaders()});
+    if(!r.ok)return;
+    const rows=await r.json();
+    const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]}; let maxU=0;
+    rows.forEach(n=>{ if(REJECTED.has(n.item_key))return; if(t[n.editoria])t[n.editoria].push(n);
+      const u=Date.parse(n.updated_at)||0; if(u>maxU)maxU=u; });
+    if(rows.length){ S.trending=t; _cacheTime=maxU||Date.now(); renderDashboard(); }
+  }catch(e){}
+}
+// puxa os feeds, monta as tendências e grava no cache do Supabase
+async function refreshDashboard(){
+  setStatus('dash-status','Atualizando dos feeds...');
+  const lg=document.getElementById('dash-log'); if(lg)lg.textContent='';
+  const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
   const seen=new Set();
-  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k))return;seen.add(k);(S.trending[n.editoria]||(S.trending[n.editoria]=[])).push(n);});
+  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k))return;seen.add(k);(t[n.editoria]||(t[n.editoria]=[])).push(n);});
   await Promise.allSettled(FEEDS.map(async f=>{
     try{const xml=await fetchWithProxy(f.url);add(recentOnly(parseRss(xml,f.nome,f.ed),14).slice(0,18));}
     catch(e){log('dash-log',`✘ ${f.nome}`);}
@@ -923,42 +988,64 @@ async function loadDashboard(){
   }));
   for(const ed of Object.keys(GN_QUERIES)){
     let win=21;
-    while((S.trending[ed]||[]).length<10 && win<=120){await fetchMoreForEditoria(ed,win,add);win+=40;}
-    log('dash-log',`${(S.trending[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(S.trending[ed]||[]).length}`);
+    while((t[ed]||[]).length<10 && win<=120){await fetchMoreForEditoria(ed,win,add);win+=40;}
+    log('dash-log',`${(t[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(t[ed]||[]).length}`);
   }
-  _dashLoading=false; renderDashboard();
-  const total=Object.values(S.trending).reduce((a,b)=>a+b.length,0);
-  setStatus('dash-status',`${total} notícias em alta`,'ok');
+  S.trending=t; _cacheTime=Date.now(); renderDashboard();
+  const total=Object.values(t).reduce((a,b)=>a+b.length,0);
+  setStatus('dash-status',`${total} notícias · atualizado agora`,'ok');
+  cacheNewsToSupa(t);
 }
+async function cacheNewsToSupa(t){
+  if(!supaConfigured())return;
+  const now=new Date().toISOString(), rows=[];
+  Object.entries(t).forEach(([ed,arr])=>arr.slice(0,24).forEach(n=>{
+    const d=Date.parse(n.data);
+    rows.push({item_key:itemKey(n),editoria:ed,titulo:(n.titulo||'').slice(0,500),fonte:(n.fonte||'').slice(0,160),
+      link:n.link||'',resumo:(n.resumo||'').slice(0,500),imagem:(n.imagem||'').slice(0,800),
+      data:isNaN(d)?null:new Date(d).toISOString(),updated_at:now});
+  }));
+  if(!rows.length)return;
+  try{
+    const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+    await fetch(url+'/rest/v1/news_cache?on_conflict=item_key',{method:'POST',
+      headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal',...supaHeaders()},
+      body:JSON.stringify(rows)});
+  }catch(e){}
+}
+function autoTickDashboard(){ if(_dashLoaded||S.trending&&Object.values(S.trending).some(a=>a.length)) loadDashboard(false); }
 function renderDashboard(){
   const host=document.getElementById('dash-blocks'); if(!host)return;
   const eds=['DESTAQUE','UPDATES','REDES','NEWS','PLANS'];
   if(eds.every(ed=>!(S.trending[ed]||[]).length)){
-    host.innerHTML='<div class="card"><p class="hint">Clique em <b>Carregar / atualizar tendências</b> para ver as notícias em alta de cada editoria.</p></div>';return;
+    host.innerHTML='<div class="card"><p class="hint">Carregando as notícias em alta... se demorar, clique em <b>Carregar / atualizar tendências</b>.</p></div>';return;
   }
   host.innerHTML=eds.map(ed=>{
     const list=(S.trending[ed]||[]).slice().sort((a,b)=>scoreItem(b)-scoreItem(a)).slice(0,12);
     return `<div class="card">
       <h2>${ED_LABEL(ed)} <span class="pill ${ed}">${list.length}</span></h2>
       ${prefSummary(ed)}
-      ${list.map(n=>dashRow(ed,n)).join('')||'<p class="hint">Sem notícias nesta editoria.</p>'}
+      <div class="portal-grid">${list.map(n=>portalCard(ed,n)).join('')||'<p class="hint">Sem notícias nesta editoria.</p>'}</div>
     </div>`;
   }).join('');
 }
-function dashRow(ed,n){
+function portalCard(ed,n){
   const k=itemKey(n), v=lastVote(k,ed), sc=scoreItem(n);
-  return `<div class="news-item">
-    <div class="ni-main">
-      <div class="ttl">${esc(n.titulo)}</div>
-      <div class="meta">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${sc?` <span class="score-badge">afinidade ${sc>0?'+':''}${sc}</span>`:''}</div>
-      ${n.resumo?`<div class="desc">${esc(n.resumo)}</div>`:''}
-    </div>
-    <div class="ni-side">
-      <div class="ni-actions">
+  const img=n.imagem
+    ? `<img class="ph" loading="lazy" src="${esc(n.imagem)}" alt="" onerror="this.classList.add('imgfail');this.nextElementSibling.style.display='flex'"><div class="ph-fallback" style="display:none">${ED_LABEL(ed)}</div>`
+    : `<div class="ph-fallback">${ED_LABEL(ed)}</div>`;
+  return `<div class="portal-card">
+    ${img}
+    <div class="body">
+      <div class="src">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${sc?` · afinidade ${sc>0?'+':''}${sc}`:''}</div>
+      <div class="chamada">${esc(n.titulo)}</div>
+      <div class="excerpt">${esc(n.resumo||'')}</div>
+      <div class="pc-foot">
         <button class="vote up ${v===1?'on':''}" title="quero mais notícias assim" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',1)">👍</button>
         <button class="vote down ${v===-1?'on':''}" title="não quero esse tipo" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',-1)">👎</button>
+        <span class="spacer"></span>
+        ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank">↗ Acessar</a>`:''}
       </div>
-      ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank">↗ Acessar</a>`:''}
     </div>
   </div>`;
 }
@@ -1389,7 +1476,10 @@ async function copyText(){
 
 /* ===================== INIT ===================== */
 loadLocalFeedback(); buildPrefs(); renderDashboard();
-supaSyncPrefs().then(()=>{ if(document.getElementById('tab-dashboard').classList.contains('active')) renderDashboard(); });
+dashFromCache();   // pré-carrega o cache do Supabase pra abrir o dashboard instantâneo
+supaSyncPrefs();
+// auto-refresh: checa a cada 30 min e repõe dos feeds quando o cache passa de 6h
+setInterval(autoTickDashboard, 30*60*1000);
 </script>
 </body>
 </html>
