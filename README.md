@@ -19,7 +19,7 @@ O fluxo completo:
 
 ## Fontes de notícias (em ordem de custo)
 
-1. **Feeds RSS** (grátis) — **preferencialmente brasileiros** e pouco inclinados politicamente, ligados por padrão: Meio & Mensagem, B9, Adnews, Rock Content, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Exame, Superinteressante, G1 (Ciência, Tecnologia e Pop & Arte), Hypeness e Rolling Stone Brasil. Outros BR como opção (Mobile Time, Meio Bit, Startupi, Jovem Nerd, Cinepop, POPline, IGN Brasil, Omelete) e um conjunto internacional de fallback (TechCrunch, The Verge, Wired, Ars Technica, MIT Tech Review, Variety, Pitchfork etc.) desligado por padrão. Filtrados pelos últimos 8 dias.
+1. **Feeds RSS** (grátis) — **somente fontes brasileiras** (conteúdo em português), pouco inclinadas politicamente. Ligados por padrão: Meio & Mensagem, B9, Adnews, Rock Content, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Exame, Superinteressante, G1 (Ciência, Tecnologia e Pop & Arte), Hypeness e Rolling Stone Brasil. Outros BR como opção (Mobile Time, Meio Bit, Startupi, Jovem Nerd, Cinepop, POPline, IGN Brasil, Omelete). Filtrados pelos últimos 8 dias. **Nada em inglês**: feeds internacionais foram removidos, a busca via GPT exige resposta em português e qualquer notícia que chegar em inglês (Google Notícias/GPT) é **traduzida automaticamente** para o português (Google Tradutor, sem chave).
 2. **Google Notícias** (grátis, sem chave) — tópicos de Tecnologia/Ciência para o Destaque e buscas específicas por editoria, últimos 7 dias.
 3. **GPT web search** (usa tokens) — busca **apenas as editorias que ainda têm menos de 8 notícias**, em chamadas paralelas. Se tudo estiver abastecido, não gasta nada.
 

@@ -523,21 +523,6 @@ const FEEDS=[
   {nome:'POPline (música)',url:'https://portalpopline.com.br/feed/',ed:'PLANS',on:false},
   {nome:'IGN Brasil',url:'https://br.ign.com/feed.xml',ed:'PLANS',on:false},
   {nome:'Omelete (RSS instável)',url:'https://www.omelete.com.br/rss',ed:'PLANS',on:false},
-
-  /* ===== INTERNACIONAIS (fallback, desligados por padrão) ===== */
-  {nome:'TechCrunch (intl)',url:'https://techcrunch.com/feed/',ed:'UPDATES',on:false},
-  {nome:'The Verge (intl)',url:'https://www.theverge.com/rss/index.xml',ed:'UPDATES',on:false},
-  {nome:'Wired (intl)',url:'https://www.wired.com/feed/rss',ed:'UPDATES',on:false},
-  {nome:'Ars Technica (intl)',url:'https://feeds.arstechnica.com/arstechnica/index',ed:'UPDATES',on:false},
-  {nome:'MIT Technology Review (intl)',url:'https://www.technologyreview.com/feed/',ed:'UPDATES',on:false},
-  {nome:'Engadget (intl)',url:'https://www.engadget.com/rss.xml',ed:'UPDATES',on:false},
-  {nome:'Fast Company (intl)',url:'https://www.fastcompany.com/latest/rss',ed:'NEWS',on:false},
-  {nome:'Social Media Today (intl)',url:'https://www.socialmediatoday.com/feeds/news/',ed:'REDES',on:false},
-  {nome:'Search Engine Journal (intl)',url:'https://www.searchenginejournal.com/feed/',ed:'REDES',on:false},
-  {nome:'Mashable (intl)',url:'https://mashable.com/feeds/rss/all',ed:'NEWS',on:false},
-  {nome:'Smithsonian Magazine (intl)',url:'https://www.smithsonianmag.com/rss/latest_articles/',ed:'DESTAQUE',on:false},
-  {nome:'Variety (intl)',url:'https://variety.com/feed/',ed:'PLANS',on:false},
-  {nome:'Pitchfork (intl)',url:'https://pitchfork.com/feed/feed-news/rss',ed:'PLANS',on:false},
 ];
 function renderFeeds(){
   document.getElementById('feed-list').innerHTML=FEEDS.map((f,i)=>
@@ -558,6 +543,48 @@ async function fetchWithProxy(url){
     }catch(e){/* tenta o próximo */}
   }
   throw new Error('todas as tentativas falharam');
+}
+
+/* ===================== IDIOMA / TRADUÇÃO ===================== */
+// heurística leve: detecta título/resumo que parece estar em inglês
+function looksEnglish(s){
+  const t=' '+String(s||'').toLowerCase().normalize('NFD').replace(/[^a-z ]/g,' ').replace(/\s+/g,' ')+' ';
+  if(t.trim().length<6)return false;
+  const EN=[' the ',' and ',' with ',' for ',' you ',' your ',' this ',' that ',' from ',' what ',' how ',' why ',' are ',' new ',' says ',' will ',' has ',' have ',' about ',' best ',' first ',' over ',' into ',' than ',' here ',' more ',' they ',' their ',' our '];
+  const PT=[' de ',' da ',' do ',' das ',' dos ',' que ',' para ',' com ',' uma ',' um ',' nao ',' no ',' na ',' os ',' as ',' por ',' como ',' mais ',' voce ',' esta ',' sao ',' ja ',' sobre ',' ao ',' dos ',' pelo ',' pela '];
+  let e=0,p=0; EN.forEach(w=>{if(t.includes(w))e++;}); PT.forEach(w=>{if(t.includes(w))p++;});
+  return e>=2 && e>p;
+}
+// fetch que aceita respostas curtas (direto e, se falhar, pelos proxies de CORS)
+async function fetchTextAny(url){
+  try{const r=await fetch(url,{signal:AbortSignal.timeout(12000)});if(r.ok){const t=await r.text();if(t)return t;}}catch(e){}
+  for(const p of PROXIES){try{const r=await fetch(p(url),{signal:AbortSignal.timeout(12000)});if(r.ok){const t=await r.text();if(t)return t;}}catch(e){}}
+  return '';
+}
+// tradução gratuita (endpoint público do Google Tradutor), sem chave
+async function translateToPt(text){
+  if(!text)return text;
+  try{
+    const u='https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=pt-BR&dt=t&q='+encodeURIComponent(text.slice(0,1500));
+    const raw=await fetchTextAny(u);
+    if(!raw)return text;
+    const data=JSON.parse(raw);
+    const out=(data[0]||[]).map(seg=>seg&&seg[0]).filter(Boolean).join('');
+    return out||text;
+  }catch(e){return text;}
+}
+// se a notícia veio em inglês por engano, traduz título + resumo para português
+async function ensurePt(n){
+  if(!n||n._translated)return false;
+  if(!looksEnglish((n.titulo||'')+' '+(n.resumo||'')))return false;
+  const [t,r]=await Promise.all([translateToPt(n.titulo), n.resumo?translateToPt(n.resumo):Promise.resolve(n.resumo)]);
+  n.titulo=t||n.titulo; n.resumo=r||n.resumo; n._translated=true;
+  return true;
+}
+async function translateAll(arr){
+  let changed=false;
+  for(const n of arr){ try{ if(await ensurePt(n)) changed=true; }catch(e){} }
+  return changed;
 }
 function firstImage(it,html){
   const attr=(tag,a)=>{const n=it.getElementsByTagName(tag);for(let i=0;i<n.length;i++){const u=n[i].getAttribute(a);if(u)return u;}return '';};
@@ -617,7 +644,13 @@ async function fetchFeeds(){
       log('coleta-log',`✔ ${f.nome}: ${items.length} notícias (últimos 8 dias)`);
     }catch(e){log('coleta-log',`✘ ${f.nome}: ${e.message}`);}
   }));
+  await translateColeta();
   setStatus('coleta-status',`${ok}/${ativos.length} feeds carregados — ${S.items.length} notícias na lista`, ok?'ok':'err');
+}
+// traduz para PT qualquer item da coleta que tenha vindo em inglês
+async function translateColeta(){
+  const ch=await translateAll(S.items);
+  if(ch){ renderCounts(); if(document.getElementById('tab-curadoria').classList.contains('active')) renderItems(); }
 }
 
 /* ===================== GOOGLE NOTÍCIAS (RSS GRÁTIS, SEM TOKEN) ===================== */
@@ -660,6 +693,7 @@ async function gnewsSearch(){
     total+=got;
     log('coleta-log',`${got?'✔':'✘'} Google News ${ED_LABEL(ed)}: ${got} notícias`);
   }));
+  await translateColeta();
   setStatus('coleta-status',
     total?`Google Notícias trouxe ${total} notícias — total: ${S.items.length}`:'Google Notícias falhou — tente o GPT',
     total?'ok':'err');
@@ -721,9 +755,9 @@ async function gptSearch(){
   let tipoInstr='';
   if(tipo==='especial'&&tipoTema) tipoInstr=` Esta é uma edição especial sobre "${tipoTema}": priorize notícias ligadas a esse tema quando existirem.`;
   if(tipo==='campanha'&&tipoTema) tipoInstr=` Se encontrar notícia recente ligada à campanha "${tipoTema}", inclua.`;
-  const mkPrompt=(ed)=>`Pesquise na web e devolva ${ED_BRIEF[ed]}. Apenas notícias REAIS dos últimos 7 dias. PRIORIZE notícias em português de veículos BRASILEIROS; só use fonte internacional quando o assunto for relevante para o Brasil e não houver cobertura nacional.${tipoInstr}
+  const mkPrompt=(ed)=>`Pesquise na web e devolva ${ED_BRIEF[ed]}. Apenas notícias REAIS dos últimos 7 dias. OBRIGATÓRIO: título e resumo escritos EM PORTUGUÊS DO BRASIL. NÃO devolva nada em inglês; se a fonte for internacional, traduza o título e o resumo para português antes de responder.${tipoInstr}
 PROIBIDO: política partidária, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
-Prefira fontes brasileiras confiáveis e pouco inclinadas politicamente (Meio & Mensagem, B9, Adnews, Rock Content, Exame, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Superinteressante, G1, Hypeness, Rolling Stone Brasil, Omelete, Jovem Nerd, IGN Brasil). Fontes internacionais (TechCrunch, The Verge, Wired) só como último recurso.
+Prefira fontes brasileiras confiáveis e pouco inclinadas politicamente (Meio & Mensagem, B9, Adnews, Rock Content, Exame, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Superinteressante, G1, Hypeness, Rolling Stone Brasil, Omelete, Jovem Nerd, IGN Brasil).
 Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido, sem markdown:
 {"noticias":[{"titulo":"...","resumo":"1 frase factual","fonte":"veículo","link":"url"}]}`;
   let total=0,fail=0;
@@ -749,6 +783,7 @@ Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido
     }finally{clearTimeout(to);}
   }));
   clearInterval(timer);_searching=false;
+  await translateColeta();
   const secs=Math.round((Date.now()-t0)/1000);
   setStatus('coleta-status',
     fail===alvo.length?'Busca GPT falhou — veja o log acima':`GPT trouxe ${total} notícias em ${secs}s — total: ${S.items.length}`,
@@ -783,7 +818,7 @@ function itemRow(i){
     <input type="checkbox" ${i.sel?'checked':''} onchange="tgl(${i.id},'sel',this.checked)">
     <div class="ni-main">
       <div class="ttl">${esc(i.titulo)}</div>
-      <div class="meta"><span class="pill ${i.editoria}">${ED_LABEL(i.editoria)}</span> ${esc(i.fonte)}${i.data?' · '+fmtDate(i.data):''}${sc?` <span class="score-badge">afinidade ${sc>0?'+':''}${sc}</span>`:''}${i._new?' <span class="score-badge" style="color:var(--ok)">nova</span>':''}</div>
+      <div class="meta"><span class="pill ${i.editoria}">${ED_LABEL(i.editoria)}</span> ${esc(i.fonte)}${i.data?' · '+fmtDate(i.data):''}${sc?` <span class="score-badge">afinidade ${sc>0?'+':''}${sc}</span>`:''}${i._new?' <span class="score-badge" style="color:var(--ok)">nova</span>':''}${i._translated?' <span class="score-badge">traduzido</span>':''}</div>
       ${i.resumo?`<div class="desc">${esc(i.resumo)}</div>`:''}
     </div>
     <div class="ni-side">
@@ -961,11 +996,11 @@ function pickReserve(ed){
 function addReplacement(n){S.items.push({id:_id++,sel:false,star:false,vote:0,_new:true,...n});}
 async function bringReplacement(ed){
   let n=pickReserve(ed);
-  if(n){addReplacement(n);return true;}
+  if(n){await ensurePt(n);addReplacement(n);return true;}
   for(const days of [15,30,60,120,3650]){ // supera os 7 dias quando os feeds recentes acabam
     await fetchMoreForEditoria(ed,days,pushReserve);
     n=pickReserve(ed);
-    if(n){addReplacement(n);return true;}
+    if(n){await ensurePt(n);addReplacement(n);return true;}
   }
   return false;
 }
@@ -1009,7 +1044,11 @@ async function dashFromCache(){
     const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]}; let maxU=0;
     rows.forEach(n=>{ if(REJECTED.has(n.item_key))return; if(t[n.editoria])t[n.editoria].push(n);
       const u=Date.parse(n.updated_at)||0; if(u>maxU)maxU=u; });
-    if(rows.length){ S.trending=t; _cacheTime=maxU||Date.now(); renderDashboard(); }
+    if(rows.length){
+      S.trending=t; _cacheTime=maxU||Date.now(); renderDashboard();
+      // rede de segurança: se algo no cache estiver em inglês, traduz e regrava
+      translateAll([].concat(...Object.values(t))).then(ch=>{ if(ch){ renderDashboard(); cacheNewsToSupa(S.trending); } });
+    }
   }catch(e){}
 }
 // puxa os feeds, monta as tendências e grava no cache do Supabase
@@ -1031,6 +1070,8 @@ async function refreshDashboard(){
     while((t[ed]||[]).length<10 && win<=120){await fetchMoreForEditoria(ed,win,add);win+=40;}
     log('dash-log',`${(t[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(t[ed]||[]).length}`);
   }
+  setStatus('dash-status','Traduzindo o que veio em inglês...');
+  await translateAll([].concat(...Object.values(t)));   // nada em inglês: traduz o que escapar
   S.trending=t; _cacheTime=Date.now(); renderDashboard();
   const total=Object.values(t).reduce((a,b)=>a+b.length,0);
   setStatus('dash-status',`${total} notícias · atualizado agora`,'ok');
@@ -1078,7 +1119,7 @@ function portalCard(ed,n){
   return `<div class="portal-card">
     ${img}
     <div class="body">
-      <div class="src">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${sc?` · afinidade ${sc>0?'+':''}${sc}`:''}</div>
+      <div class="src">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${sc?` · afinidade ${sc>0?'+':''}${sc}`:''}${n._translated?' · traduzido':''}</div>
       <div class="chamada">${esc(n.titulo)}</div>
       <div class="excerpt">${esc(n.resumo||'')}</div>
       <div class="pc-foot">
