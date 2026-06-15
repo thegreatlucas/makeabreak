@@ -23,6 +23,7 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px}
   button,input,select,textarea{font-family:inherit}
+  img{max-width:100%;height:auto}
   .lucide{width:1.05em;height:1.05em;vertical-align:-0.16em;stroke-width:2}
   .btn{display:inline-flex;align-items:center;gap:7px;justify-content:center}
   nav.steps button{display:inline-flex;align-items:center;gap:7px}
@@ -98,10 +99,12 @@
   .ed-field label{margin-top:0}
   .ed-sec{border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;background:var(--panel2)}
   .ed-sec h3{font-size:14px;margin-bottom:8px}
-  .bullet-row{display:flex;gap:6px;margin-bottom:6px}
-  .bullet-row input.em{width:52px;flex:none;text-align:center}
-  .bullet-row input.lk{width:34%}
-  .bullet-row button{background:none;border:none;color:var(--err);cursor:pointer;font-size:16px}
+  .bullet-row{display:flex;gap:6px;margin-bottom:6px;align-items:center}
+  .bullet-row input.em{flex:0 0 46px;width:46px;text-align:center;padding:10px 4px}
+  .bullet-row input.tx{flex:7 1 0;min-width:0}
+  .bullet-row input.lk{flex:2 1 0;min-width:0;width:auto}
+  .bullet-row button{flex:0 0 26px;display:inline-flex;align-items:center;justify-content:center;background:none;border:none;color:var(--err);cursor:pointer;padding:0}
+  .ov-label{font-size:12px;color:var(--muted);margin-top:8px;margin-bottom:2px;font-weight:600}
   .addb{background:none;border:1px dashed var(--border);color:var(--muted);width:100%;padding:6px;border-radius:8px;cursor:pointer;font-size:12px}
   .thumb{height:42px;max-width:80px;object-fit:cover;border-radius:6px;border:1px solid var(--border);flex:none}
   a.imglink{color:var(--navy);font-weight:600;font-size:12px;text-decoration:none}
@@ -1113,7 +1116,8 @@ function pickImage(k,enc,el){
   setPath(S.edition,'imagens.'+k,url);
   const inp=document.querySelector(`input[data-p="imagens.${k}"]`); if(inp)inp.value=url;
   const im=document.querySelector(`img[data-thumb="${k}"]`); if(im){im.src=url;im.style.display='';}
-  document.querySelectorAll('#ov-'+k+' .ov-thumb').forEach(t=>t.classList.remove('sel'));
+  const scope=el?el.closest('.ed-field'):document;
+  (scope||document).querySelectorAll('.ov-thumb.sel').forEach(t=>t.classList.remove('sel'));
   if(el)el.classList.add('sel');
 }
 
@@ -1257,22 +1261,39 @@ function normalizeEdition(e){
 }
 
 /* ===================== EDITOR ===================== */
+// mapeia cada imagem da edição para a editoria correspondente
+const IMG_ED={banner:'DESTAQUE',updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
+// imagens das notícias selecionadas daquela editoria (opções de imagem reais da matéria)
+function newsImagesFor(k){
+  const ed=IMG_ED[k]; if(!ed)return [];
+  const seen=new Set(), out=[];
+  S.items.filter(i=>i.sel && i.editoria===ed && i.imagem).forEach(i=>{
+    if(seen.has(i.imagem))return; seen.add(i.imagem);
+    out.push({url:i.imagem,titulo:i.titulo||''});
+  });
+  return out;
+}
 function renderEditor(){
   const e=S.edition;if(!e)return;
   document.getElementById('editor-card').style.display='block';
   const fld=(path,label,val,ta)=>`<div class="ed-field"><label>${label}</label>${ta?`<textarea data-p="${path}">${esc(val)}</textarea>`:`<input type="text" data-p="${path}" value="${esc(val)}">`}</div>`;
   const bullets=(sec,arr)=>`<div data-bsec="${sec}">${(arr||[]).map((b,i)=>brow(sec,i,b)).join('')}</div><button class="addb" onclick="addBullet('${sec}')">+ bullet</button>`;
-  const imgRow=(k,label,sug)=>`<div class="ed-field">
-    <label>${label}${sug?` &nbsp;·&nbsp; sugestão: <i>${esc(sug)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(sug)}" target="_blank">🔍 Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(sug)}" target="_blank">Unsplash</a>`:''}</label>
+  const imgRow=(k,label,sug)=>{
+    const newsImgs=newsImagesFor(k);
+    return `<div class="ed-field">
+    <label>${label}${sug?` &nbsp;·&nbsp; sugestão: <i>${esc(sug)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(sug)}" target="_blank"><i data-lucide="search"></i> Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(sug)}" target="_blank">Unsplash</a>`:''}</label>
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" data-p="imagens.${k}" value="${esc(e.imagens?.[k]||'')}" placeholder="URL da imagem hospedada (biblioteca do RD Station, Imgur, seu site...)">
       <img class="thumb" data-thumb="${k}" src="${esc(e.imagens?.[k]||'')}" onerror="this.style.display='none'" ${e.imagens?.[k]?'':'style="display:none"'}>
     </div>
+    ${newsImgs.length?`<div class="ov-label">Imagens das notícias selecionadas (${ED_LABEL(IMG_ED[k])}):</div>
+    <div class="ov-gallery">${newsImgs.map(im=>`<img class="ov-thumb" loading="lazy" src="${esc(im.url)}" title="${esc(im.titulo)}" onclick="pickImage('${k}','${encodeURIComponent(im.url)}',this)" onerror="this.remove()">`).join('')}</div>`:''}
     <div class="ov-tools">
       <input type="text" id="ovq-${k}" value="${esc(sug||'')}" placeholder="termo de busca da imagem">
       <button class="btn-sm" type="button" onclick="openverse('${k}')"><i data-lucide="image"></i> Buscar sugestões</button>
     </div>
     <div class="ov-gallery" id="ov-${k}"></div></div>`;
+  };
   document.getElementById('editor').innerHTML=`
     ${fld('assunto','Assunto do e-mail',e.assunto)}
     <div class="ed-field"><label>Pre-header <span style="color:var(--muted);font-weight:400">· fixo no padrão da Make</span></label>
@@ -1328,9 +1349,9 @@ function renderEditor(){
 function brow(sec,i,b){
   return `<div class="bullet-row" data-b="${sec}.${i}">
     <input class="em" value="${esc(b.emoji||'')}" data-bk="emoji">
-    <input value="${esc(b.texto||'')}" data-bk="texto" placeholder="texto do bullet">
+    <input class="tx" value="${esc(b.texto||'')}" data-bk="texto" placeholder="texto do bullet">
     <input class="lk" value="${esc(b.link||'')}" data-bk="link" placeholder="link (opcional)">
-    <button title="remover" onclick="delBullet('${sec}',${i})">✕</button></div>`;
+    <button class="del-b" title="remover" onclick="delBullet('${sec}',${i})"><i data-lucide="x"></i></button></div>`;
 }
 function secBullets(sec){const map={updates:'updates',redes:'redes',news:'news',plans:'plans'};const o=S.edition[map[sec]];if(!o.bullets)o.bullets=[];return o.bullets;}
 function bindBullets(){
