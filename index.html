@@ -199,6 +199,22 @@
   .portal-card .pc-foot .spacer{flex:1}
   .dash-meta{font-size:12px;color:var(--muted)}
 
+  /* ----- meta 7/editoria + candidato + arrastar ----- */
+  .cur-progress{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0 14px}
+  .prog-lbl{font-size:12px;color:var(--muted);font-weight:600;margin-right:2px}
+  .prog{font-size:12px;font-weight:700;color:var(--muted);background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:4px 12px;transition:all .15s ease}
+  .prog.done{color:#fff;background:var(--ok);border-color:var(--ok)}
+  .sug-card{background:var(--panel2);border:1px solid var(--red);border-radius:12px;padding:14px;margin:4px 0 14px;animation:fadeUp .25s ease both}
+  .sug-card.ok{border-color:var(--ok);color:var(--ok);font-weight:700}
+  .sug-head{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .sug-lbl{font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--red);font-weight:800}
+  .sug-img{max-height:170px;border-radius:8px;display:block;margin-bottom:8px}
+  .sug-ttl{font-size:17px;font-weight:700;line-height:1.35;color:var(--text)}
+  .sug-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+  .bullet-row .grip{flex:0 0 18px;display:inline-flex;align-items:center;justify-content:center;color:var(--muted);cursor:grab;user-select:none}
+  .bullet-row .grip:active{cursor:grabbing}
+  .bullet-row.dragging{opacity:.45}
+  [data-bsec].dragover{outline:2px dashed var(--red);outline-offset:3px;border-radius:8px;background:rgba(234,52,40,.05)}
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -382,6 +398,15 @@
       <div class="spacer"></div>
       <span class="status" id="cur-status"></span>
     </div>
+    <div class="cur-progress" id="cur-progress"></div>
+    <div class="toolbar" style="margin-bottom:8px">
+      <span style="font-size:13px;color:var(--muted);font-weight:600">Trazer nova notícia de:</span>
+      <select id="sug-ed">
+        <option>DESTAQUE</option><option>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
+      </select>
+      <button class="btn sec" style="margin-top:0" onclick="bringSuggestion()"><i data-lucide="plus"></i> Buscar candidato</button>
+    </div>
+    <div id="cur-suggest"></div>
     <div id="items-list"></div>
   </div>
 </section>
@@ -684,9 +709,11 @@ function parseGNews(xmlText,editoria){
   return out.filter(i=>i.titulo);
 }
 async function gnewsSearch(){
-  setStatus('coleta-status','Buscando no Google Notícias (grátis)...');
+  const falt=edFaltando();
+  if(!falt.length){setStatus('coleta-status',`Todas as editorias já fecharam em ${TARGET_SEL} selecionadas — nada a buscar.`,'ok');return;}
+  setStatus('coleta-status','Buscando no Google Notícias (só o que falta)...');
   let total=0,fail=0;
-  await Promise.allSettled(Object.entries(GN_QUERIES).map(async([ed,urls])=>{
+  await Promise.allSettled(Object.entries(GN_QUERIES).filter(([ed])=>falt.includes(ed)).map(async([ed,urls])=>{
     let got=0;
     for(const u of urls){
       try{
@@ -742,15 +769,13 @@ async function gptSearch(){
   saveConfig();
   const key=cfg('cfg-key');
   if(!key){setStatus('coleta-status','Configure a API key na aba 1.','err');go('config');return;}
-  // só busca editorias que ainda têm poucas notícias (economiza tokens)
-  const MIN=8;
-  const counts={};S.items.forEach(i=>counts[i.editoria]=(counts[i.editoria]||0)+1);
-  const alvo=Object.keys(ED_BRIEF).filter(ed=>(counts[ed]||0)<MIN);
+  // só busca o que falta: editorias que ainda não fecharam em 7 selecionadas
+  const alvo=edFaltando();
   if(!alvo.length){
-    setStatus('coleta-status',`Todas as editorias já têm ${MIN}+ notícias — nada a buscar. (Use os filtros da Curadoria.)`,'ok');
+    setStatus('coleta-status',`Todas as editorias já fecharam em ${TARGET_SEL} selecionadas — nada a buscar.`,'ok');
     return;
   }
-  log('coleta-log','→ GPT vai buscar só: '+alvo.map(ED_LABEL).join(', ')+' (as outras já têm '+MIN+'+)');
+  log('coleta-log','→ GPT vai puxar só o que falta: '+alvo.map(ED_LABEL).join(', '));
   _searching=true;
   const t0=Date.now();
   const timer=setInterval(()=>{
@@ -805,6 +830,18 @@ function addManual(){
 
 /* ===================== CURADORIA ===================== */
 const ED_LABEL=e=>e==='REDES'?'REDES SOCIAIS':e;
+const ALL_ED=['DESTAQUE','UPDATES','REDES','NEWS','PLANS'];
+const TARGET_SEL=7;                       // meta de links selecionados por editoria
+function selCount(ed){return S.items.filter(i=>i.sel&&i.editoria===ed).length;}
+function edFull(ed){return selCount(ed)>=TARGET_SEL;}
+function edFaltando(){return ALL_ED.filter(ed=>!edFull(ed));}   // editorias que ainda não fecharam em 7
+function renderProgress(){
+  const el=document.getElementById('cur-progress'); if(!el)return;
+  el.innerHTML='<span class="prog-lbl">Meta por editoria:</span>'+ALL_ED.map(ed=>{
+    const c=selCount(ed), done=c>=TARGET_SEL;
+    return `<span class="prog ${done?'done':''}">${ED_LABEL(ed)} ${c}/${TARGET_SEL}${done?' ✓':''}</span>`;
+  }).join('');
+}
 function renderItems(){
   const fEd=document.getElementById('filtro-editoria').value;
   const fSel=document.getElementById('filtro-sel').value;
@@ -812,7 +849,7 @@ function renderItems(){
   let list=S.items.filter(i=>(!fEd||i.editoria===fEd)&&(!fSel||i.sel)&&(!fTx||(i.titulo+i.resumo).toLowerCase().includes(fTx)));
   list.sort((a,b)=>scoreItem(b)-scoreItem(a)); // preferências aprendidas primeiro
   document.getElementById('items-list').innerHTML=list.map(itemRow).join('')||'<p class="hint">Nenhuma notícia — volte à aba Coleta.</p>';
-  refreshIcons();
+  refreshIcons(); renderProgress();
   const sel=S.items.filter(i=>i.sel).length;
   setStatus('cur-status',sel+' selecionadas');
 }
@@ -885,15 +922,77 @@ async function curaVote(id,val){
     setStatus('cur-status','👍 anotado: a news vai priorizar notícias assim.','ok');
   }
 }
-function tgl(id,k,v){const i=S.items.find(x=>x.id===id);i[k]=v;if(k==='sel'&&v===false)i.star=false;renderItems();}
+function tgl(id,k,v){
+  const i=S.items.find(x=>x.id===id);
+  if(k==='sel'&&v===true&&!i.sel&&edFull(i.editoria)){
+    setStatus('cur-status',ED_LABEL(i.editoria)+' já fechou em '+TARGET_SEL+' selecionadas. Desmarque uma para trocar.','err');
+    renderItems(); return;
+  }
+  i[k]=v;if(k==='sel'&&v===false)i.star=false;renderItems();
+}
 function setEd(id,v){const i=S.items.find(x=>x.id===id);i.editoria=v;i.star=false;renderItems();}
 function setStar(id){
   const i=S.items.find(x=>x.id===id);
+  if(!i.star&&!i.sel&&edFull(i.editoria)){
+    setStatus('cur-status',ED_LABEL(i.editoria)+' já fechou em '+TARGET_SEL+' selecionadas. Desmarque uma antes.','err');return;
+  }
   S.items.filter(x=>x.editoria===i.editoria&&x.id!==id).forEach(x=>x.star=false);
   i.star=!i.star;if(i.star)i.sel=true;renderItems();
 }
 function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function fmtDate(d){const x=new Date(d);return isNaN(x)?'':x.toLocaleDateString('pt-BR');}
+
+/* ===== Trazer nova notícia (um a um, aceita/recusa) ===== */
+let SUG=null, _suggesting=false;
+async function bringSuggestion(ed){
+  if(_suggesting)return;
+  ed=ed||document.getElementById('sug-ed').value;
+  const host=document.getElementById('cur-suggest');
+  if(edFull(ed)){host.innerHTML=`<div class="sug-card ok">${ED_LABEL(ed)} já fechou em ${TARGET_SEL} ✓</div>`;return;}
+  _suggesting=true;
+  host.innerHTML=`<div class="sug-card"><span class="status"><span class="spin"></span> buscando candidato de ${ED_LABEL(ed)}...</span></div>`;
+  let n=pickReserve(ed);
+  if(!n){for(const days of [15,30,60,120,3650]){await fetchMoreForEditoria(ed,days,pushReserve);n=pickReserve(ed);if(n)break;}}
+  _suggesting=false;
+  if(!n){host.innerHTML=`<div class="sug-card">Sem mais notícias novas de ${ED_LABEL(ed)} nos feeds.</div>`;return;}
+  await ensurePt(n);
+  SUG={n,ed};
+  renderSuggestion();
+}
+function renderSuggestion(){
+  const host=document.getElementById('cur-suggest'); if(!host)return;
+  if(!SUG){host.innerHTML='';return;}
+  const n=SUG.n;
+  host.innerHTML=`<div class="sug-card">
+    <div class="sug-head"><span class="pill ${SUG.ed}">${ED_LABEL(SUG.ed)}</span><span class="sug-lbl">novo candidato</span></div>
+    ${n.imagem?`<img class="sug-img" src="${esc(n.imagem)}" onerror="this.remove()">`:''}
+    <div class="sug-ttl">${esc(n.titulo)}</div>
+    <div class="meta">${esc(n.fonte||'')}${n.data?' · '+fmtDate(n.data):''}${n._translated?' · traduzido':''}</div>
+    ${n.resumo?`<div class="desc">${esc(n.resumo)}</div>`:''}
+    <div class="sug-actions">
+      <button class="btn" style="margin-top:0" onclick="acceptSuggestion()"><i data-lucide="check"></i> Aceitar</button>
+      <button class="btn sec" style="margin-top:0" onclick="rejectSuggestion()"><i data-lucide="x"></i> Recusar e ver outra</button>
+      <button class="btn sec" style="margin-top:0" onclick="stopSuggestion()">Parar</button>
+      ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank"><i data-lucide="external-link"></i> Abrir</a>`:''}
+    </div>
+  </div>`;
+  refreshIcons();
+}
+async function acceptSuggestion(){
+  const s=SUG; if(!s)return; SUG=null;
+  S.items.push({id:_id++,sel:true,star:false,vote:1,_new:true,...s.n});
+  recordVote(s.n,s.ed,1,'curadoria');   // aceitar ensina a preferência
+  renderItems();
+  if(!edFull(s.ed)) bringSuggestion(s.ed);
+  else{ document.getElementById('cur-suggest').innerHTML=`<div class="sug-card ok">${ED_LABEL(s.ed)} fechou em ${TARGET_SEL} ✓</div>`; }
+}
+async function rejectSuggestion(){
+  const s=SUG; if(!s)return; SUG=null;
+  REJECTED.add(itemKey(s.n));
+  recordVote(s.n,s.ed,-1,'curadoria');  // recusar ensina o que evitar
+  bringSuggestion(s.ed);                // já traz a próxima
+}
+function stopSuggestion(){ SUG=null; const h=document.getElementById('cur-suggest'); if(h)h.innerHTML=''; }
 
 /* ===================== INTELIGÊNCIA (votos + preferências) ===================== */
 const STOP=new Set(('a o e de da do das dos no na nos nas em um uma uns umas para pra por com sem que se ao aos as os mas como mais menos muito pouco nao sim sua seu suas seus este esta isso isto essa esse aquele aquela the of to in on for and or is are with from this that you your tem ter vai vao sobre entre apos ate pelo pela pelos pelas nova novo novas novos agora hoje semana ano anos dia dias ser foi sao seu').split(/\s+/));
@@ -1317,15 +1416,29 @@ function normalizeEdition(e){
 /* ===================== EDITOR ===================== */
 // mapeia cada imagem da edição para a editoria correspondente
 const IMG_ED={banner:'DESTAQUE',updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
-// imagens das notícias selecionadas daquela editoria (opções de imagem reais da matéria)
+// matéria principal (destaque) selecionada de uma editoria
+function principalOf(ed){
+  const sel=S.items.filter(i=>i.sel&&i.editoria===ed);
+  return sel.find(i=>i.star) || sel[0] || null;
+}
+// termo de busca de imagem a partir do TEMA do destaque da editoria
+function imgTerm(title){return String(title||'').replace(/["'“”]/g,'').replace(/\s+/g,' ').trim().split(' ').slice(0,8).join(' ');}
+function imgTermFor(k,sug){const p=principalOf(IMG_ED[k]);return (p&&imgTerm(p.titulo))||sug||'';}
+// imagem da notícia de DESTAQUE da editoria (só cai pras outras se o destaque não tiver imagem)
 function newsImagesFor(k){
   const ed=IMG_ED[k]; if(!ed)return [];
-  const seen=new Set(), out=[];
-  S.items.filter(i=>i.sel && i.editoria===ed && i.imagem).forEach(i=>{
-    if(seen.has(i.imagem))return; seen.add(i.imagem);
-    out.push({url:i.imagem,titulo:i.titulo||''});
-  });
+  const p=principalOf(ed);
+  if(p&&p.imagem) return [{url:p.imagem,titulo:p.titulo||'',principal:true}];
+  const seen=new Set(),out=[];
+  S.items.filter(i=>i.sel&&i.editoria===ed&&i.imagem).forEach(i=>{if(!seen.has(i.imagem)){seen.add(i.imagem);out.push({url:i.imagem,titulo:i.titulo||''});}});
   return out;
+}
+// troca o destaque da editoria direto na revisão (re-tema as sugestões de imagem)
+function setPrincipalEditor(ed,id){
+  id=+id; if(!id)return;
+  S.items.filter(i=>i.editoria===ed).forEach(i=>i.star=false);
+  const i=S.items.find(x=>x.id===id); if(i){i.star=true;i.sel=true;}
+  renderEditor();
 }
 function renderEditor(){
   const e=S.edition;if(!e)return;
@@ -1333,17 +1446,23 @@ function renderEditor(){
   const fld=(path,label,val,ta)=>`<div class="ed-field"><label>${label}</label>${ta?`<textarea data-p="${path}">${esc(val)}</textarea>`:`<input type="text" data-p="${path}" value="${esc(val)}">`}</div>`;
   const bullets=(sec,arr)=>`<div data-bsec="${sec}">${(arr||[]).map((b,i)=>brow(sec,i,b)).join('')}</div><button class="addb" onclick="addBullet('${sec}')">+ bullet</button>`;
   const imgRow=(k,label,sug)=>{
+    const ed=IMG_ED[k];
+    const selEd=S.items.filter(i=>i.sel&&i.editoria===ed);
+    const p=principalOf(ed);
+    const term=imgTermFor(k,sug);
     const newsImgs=newsImagesFor(k);
     return `<div class="ed-field">
-    <label>${label}${sug?` &nbsp;·&nbsp; sugestão: <i>${esc(sug)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(sug)}" target="_blank"><i data-lucide="search"></i> Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(sug)}" target="_blank">Unsplash</a>`:''}</label>
+    <label>${label}${term?` &nbsp;·&nbsp; tema do destaque: <i>${esc(term)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(term)}" target="_blank"><i data-lucide="search"></i> Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(term)}" target="_blank">Unsplash</a>`:''}</label>
+    ${selEd.length?`<div class="ov-tools"><span class="ov-label" style="margin:0">Destaque de ${ED_LABEL(ed)}:</span>
+      <select onchange="setPrincipalEditor('${ed}',this.value)">${selEd.map(i=>`<option value="${i.id}" ${p&&p.id===i.id?'selected':''}>${esc((i.titulo||'').slice(0,70))}</option>`).join('')}</select></div>`:''}
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" data-p="imagens.${k}" value="${esc(e.imagens?.[k]||'')}" placeholder="URL da imagem hospedada (biblioteca do RD Station, Imgur, seu site...)">
       <img class="thumb" data-thumb="${k}" src="${esc(e.imagens?.[k]||'')}" onerror="this.style.display='none'" ${e.imagens?.[k]?'':'style="display:none"'}>
     </div>
-    ${newsImgs.length?`<div class="ov-label">Imagens das notícias selecionadas (${ED_LABEL(IMG_ED[k])}):</div>
+    ${newsImgs.length?`<div class="ov-label">${newsImgs[0].principal?'Imagem do destaque':'Imagens das notícias'} (${ED_LABEL(ed)}):</div>
     <div class="ov-gallery">${newsImgs.map(im=>`<img class="ov-thumb" loading="lazy" src="${esc(im.url)}" title="${esc(im.titulo)}" onclick="pickImage('${k}','${encodeURIComponent(im.url)}',this)" onerror="this.remove()">`).join('')}</div>`:''}
     <div class="ov-tools">
-      <input type="text" id="ovq-${k}" value="${esc(sug||'')}" placeholder="termo de busca da imagem">
+      <input type="text" id="ovq-${k}" value="${esc(term)}" placeholder="termo de busca da imagem">
       <button class="btn-sm" type="button" onclick="openverse('${k}')"><i data-lucide="image"></i> Buscar sugestões</button>
     </div>
     <div class="ov-gallery" id="ov-${k}"></div></div>`;
@@ -1371,6 +1490,7 @@ function renderEditor(){
     <div class="ed-sec"><h3>Destaque <span class="pill DESTAQUE">DESTAQUE</span></h3>
       ${fld('destaque.titulo','Título',e.destaque?.titulo||'')}
       ${fld('destaque.texto','Texto',e.destaque?.texto||'',1)}</div>
+    <p class="hint" style="margin:14px 0 6px"><i data-lucide="grip-vertical"></i> Dica: arraste os bullets pela alça para mover um link de uma editoria para outra.</p>
     <div class="ed-sec"><h3>Updates <span class="pill UPDATES">UPDATES</span></h3>
       ${fld('updates.titulo','Título',e.updates?.titulo||'')}
       ${fld('updates.texto','Texto',e.updates?.texto||'',1)}
@@ -1398,14 +1518,39 @@ function renderEditor(){
     };
   });
   bindBullets();
+  bindDnD();
   refreshIcons();
 }
 function brow(sec,i,b){
   return `<div class="bullet-row" data-b="${sec}.${i}">
+    <span class="grip" draggable="true" title="arraste para mover de editoria"><i data-lucide="grip-vertical"></i></span>
     <input class="em" value="${esc(b.emoji||'')}" data-bk="emoji">
     <input class="tx" value="${esc(b.texto||'')}" data-bk="texto" placeholder="texto do bullet">
     <input class="lk" value="${esc(b.link||'')}" data-bk="link" placeholder="link (opcional)">
     <button class="del-b" title="remover" onclick="delBullet('${sec}',${i})"><i data-lucide="x"></i></button></div>`;
+}
+// arrastar bullets de uma editoria para outra na revisão
+let _dragB=null;
+function bindDnD(){
+  document.querySelectorAll('.bullet-row .grip').forEach(g=>{
+    g.addEventListener('dragstart',e=>{_dragB=g.closest('.bullet-row').dataset.b;g.closest('.bullet-row').classList.add('dragging');e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',_dragB);}catch(_){}});
+    g.addEventListener('dragend',()=>{_dragB=null;document.querySelectorAll('.bullet-row').forEach(r=>r.classList.remove('dragging'));document.querySelectorAll('[data-bsec]').forEach(c=>c.classList.remove('dragover'));});
+  });
+  document.querySelectorAll('[data-bsec]').forEach(cont=>{
+    cont.addEventListener('dragover',e=>{e.preventDefault();cont.classList.add('dragover');e.dataTransfer.dropEffect='move';});
+    cont.addEventListener('dragleave',()=>cont.classList.remove('dragover'));
+    cont.addEventListener('drop',e=>{e.preventDefault();cont.classList.remove('dragover');if(!_dragB)return;const[fromSec,fromIdx]=_dragB.split('.');moveBullet(fromSec,+fromIdx,cont.dataset.bsec,e,cont);});
+  });
+}
+function moveBullet(fromSec,fromIdx,toSec,e,cont){
+  const from=secBullets(fromSec); const item=from[fromIdx]; if(!item)return;
+  let toIdx=secBullets(toSec).length;
+  const rows=[...cont.querySelectorAll('.bullet-row')];
+  for(let j=0;j<rows.length;j++){const r=rows[j].getBoundingClientRect();if(e.clientY < r.top + r.height/2){toIdx=j;break;}}
+  from.splice(fromIdx,1);
+  if(fromSec===toSec && fromIdx<toIdx) toIdx--;
+  secBullets(toSec).splice(toIdx,0,item);
+  renderEditor();
 }
 function secBullets(sec){const map={updates:'updates',redes:'redes',news:'news',plans:'plans'};const o=S.edition[map[sec]];if(!o.bullets)o.bullets=[];return o.bullets;}
 function bindBullets(){
