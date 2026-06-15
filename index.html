@@ -4,15 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Make a Break — Studio</title>
+<!-- Fonte oficial da Make: Uni Sans -->
+<link rel="preconnect" href="https://fonts.cdnfonts.com">
+<link href="https://fonts.cdnfonts.com/css/uni-sans" rel="stylesheet">
 <style>
   :root{
     --bg:#0e0f12; --panel:#17181d; --panel2:#1e2027; --border:#2a2d36;
     --text:#e9eaee; --muted:#9aa0ad;
     --yellow:#ffd500; --cyan:#00bcd4; --cyan-d:#0aa8bd;
     --ok:#3ddc84; --err:#ff5a5a;
+    /* identidade Make ID (extraída da auditoria) — para o overhaul de layout */
+    --make-navy:#070d42; --make-red:#ea3428; --make-red-l:#eb6057;
+    --font:'Uni Sans','Segoe UI',system-ui,-apple-system,sans-serif;
   }
   *{box-sizing:border-box;margin:0;padding:0}
-  body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,-apple-system,sans-serif;font-size:15px}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px}
+  button,input,select,textarea{font-family:inherit}
+  .lucide{width:1.05em;height:1.05em;vertical-align:-0.16em;stroke-width:2}
+  .btn{display:inline-flex;align-items:center;gap:7px;justify-content:center}
+  nav.steps button{display:inline-flex;align-items:center;gap:7px}
+  .vote{justify-content:center}
+  .star{display:inline-flex;align-items:center;justify-content:center;color:var(--yellow)}
+  .star .lucide{stroke-width:2.2}
+  .news-item .star.on .lucide{fill:var(--yellow)}
+  .card h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .ed-sec h3{display:flex;align-items:center;gap:7px}
+  .tipos label.tipo b{display:inline-flex;align-items:center;gap:7px}
   header.app{display:flex;align-items:center;gap:14px;padding:14px 22px;background:#000;border-bottom:3px solid var(--yellow);position:sticky;top:0;z-index:50}
   header.app .logo{font-weight:800;font-size:22px;letter-spacing:-.5px}
   header.app .logo span{color:var(--yellow)}
@@ -177,7 +194,7 @@
 </header>
 
 <nav class="steps">
-  <button data-tab="dashboard">📊 Dashboard</button>
+  <button data-tab="dashboard"><i data-lucide="layout-dashboard"></i> Dashboard</button>
   <button data-tab="config" class="active">1 · Configuração</button>
   <button data-tab="coleta">2 · Coleta de notícias</button>
   <button data-tab="curadoria">3 · Curadoria</button>
@@ -190,11 +207,11 @@
 <!-- ===================== 0. DASHBOARD ===================== -->
 <section class="tab" id="tab-dashboard">
   <div class="card">
-    <h2>📊 Dashboard de tendências <span class="tag">INTELIGENTE</span></h2>
+    <h2><i data-lucide="trending-up"></i> Dashboard de tendências <span class="tag">INTELIGENTE</span></h2>
     <p class="hint">As notícias em alta de cada editoria (10+ por bloco), no estilo de um portal: foto, chamada e um trecho do texto. As notícias ficam em cache no Supabase e se atualizam sozinhas a cada 6 horas (também dá pra forçar pelo botão). Dê 👍 no que tem a cara da Make e 👎 no que não tem: a news aprende suas preferências por editoria e passa a priorizar o que você curte, aqui e na Curadoria.</p>
     <div class="toolbar">
-      <button class="btn" onclick="loadDashboard(true)">🔄 Carregar / atualizar tendências</button>
-      <button class="btn sec" onclick="resetPrefs()" title="Zera tudo que a news aprendeu">🧹 Limpar aprendizado</button>
+      <button class="btn" onclick="loadDashboard(true)"><i data-lucide="refresh-cw"></i> Carregar / atualizar tendências</button>
+      <button class="btn sec" onclick="resetPrefs()" title="Zera tudo que a news aprendeu"><i data-lucide="eraser"></i> Limpar aprendizado</button>
       <div class="spacer"></div>
       <span class="status" id="dash-status"></span>
     </div>
@@ -263,22 +280,22 @@
     <div class="tipos" id="tipo-list">
       <label class="tipo" data-t="padrao">
         <input type="radio" name="tipo" value="padrao" checked onchange="tipoChanged()">
-        <b>📰 Padrão (semanal)</b>
+        <b><i data-lucide="newspaper"></i> Padrão (semanal)</b>
         <small>O formato clássico: banner preto + amarelo, highlights, Destaque, Updates, Redes Sociais, News e Plans com tags ciano.</small>
       </label>
       <label class="tipo" data-t="especial">
         <input type="radio" name="tipo" value="especial" onchange="tipoChanged()">
-        <b>🎬 Especial temática</b>
+        <b><i data-lucide="clapperboard"></i> Especial temática</b>
         <small>Edição inteira pautada por um grande evento cultural (tipo Barbieheimer ou Olimpíadas): cores, saudação, títulos e trocadilhos todos no tema.</small>
       </label>
       <label class="tipo" data-t="aniversario">
         <input type="radio" name="tipo" value="aniversario" onchange="tipoChanged()">
-        <b>🎂 Aniversário / comemorativa</b>
+        <b><i data-lucide="party-popper"></i> Aniversário / comemorativa</b>
         <small>A news fala em primeira pessoa celebrando o marco (1 ano, edição #100...), apresenta a "cara nova" e agradece os leitores. Visual festivo.</small>
       </label>
       <label class="tipo" data-t="campanha">
         <input type="radio" name="tipo" value="campanha" onchange="tipoChanged()">
-        <b>🎗️ Campanha do mês</b>
+        <b><i data-lucide="ribbon"></i> Campanha do mês</b>
         <small>Edição normal + box dedicado a uma causa/campanha (ex.: Outubro Rosa), citada na abertura e reforçada ao longo do mês.</small>
       </label>
     </div>
@@ -292,7 +309,7 @@
         <input type="color" id="cfg-cor" value="#ff3da0" style="height:42px;padding:4px">
       </div>
     </div>
-    <button class="btn" onclick="saveConfig();go('coleta')">Salvar e ir para a Coleta →</button>
+    <button class="btn" onclick="saveConfig();go('coleta')">Salvar e ir para a Coleta <i data-lucide="arrow-right"></i></button>
   </div>
 </section>
 
@@ -303,9 +320,9 @@
     <p class="hint">Feeds das fontes recomendadas no Guia Editorial. Desmarque o que não quiser buscar.</p>
     <div class="feeds" id="feed-list"></div>
     <div class="toolbar">
-      <button class="btn" onclick="fetchFeeds()">📡 Buscar feeds RSS</button>
-      <button class="btn" onclick="gnewsSearch()">📰 Google Notícias (grátis)</button>
-      <button class="btn cyan" onclick="gptSearch()" title="Busca apenas as editorias que ainda têm poucas notícias">🔎 Completar com GPT</button>
+      <button class="btn" onclick="fetchFeeds()"><i data-lucide="rss"></i> Buscar feeds RSS</button>
+      <button class="btn" onclick="gnewsSearch()"><i data-lucide="newspaper"></i> Google Notícias (grátis)</button>
+      <button class="btn cyan" onclick="gptSearch()" title="Busca apenas as editorias que ainda têm poucas notícias"><i data-lucide="sparkles"></i> Completar com GPT</button>
       <div class="spacer"></div>
       <span class="status" id="coleta-status"></span>
     </div>
@@ -326,7 +343,7 @@
     </div>
     <label>Resumo (opcional)</label>
     <textarea id="man-resumo"></textarea>
-    <button class="btn sec" onclick="addManual()">+ Adicionar à lista</button>
+    <button class="btn sec" onclick="addManual()"><i data-lucide="plus"></i> Adicionar à lista</button>
   </div>
 </section>
 
@@ -358,8 +375,8 @@
     <h2>Gerar edição com a linguagem da Make</h2>
     <p class="hint">O GPT recebe o Guia Editorial completo + as notícias selecionadas e devolve a edição inteira: assunto, abertura, destaque e as quatro editorias com títulos trocadilhados e bullets com emoji.</p>
     <div class="toolbar">
-      <button class="btn" id="btn-gerar" onclick="generateEdition()">✨ Gerar edição completa</button>
-      <button class="btn sec" onclick="generateEdition(true)">🔁 Regenerar (outra pegada)</button>
+      <button class="btn" id="btn-gerar" onclick="generateEdition()"><i data-lucide="sparkles"></i> Gerar edição completa</button>
+      <button class="btn sec" onclick="generateEdition(true)"><i data-lucide="refresh-cw"></i> Regenerar (outra pegada)</button>
       <div class="spacer"></div>
       <span class="status" id="gen-status"></span>
     </div>
@@ -371,7 +388,7 @@
     <h2>Editar conteúdo</h2>
     <p class="hint">Ajuste o que quiser — o preview e o HTML final usam exatamente o que estiver aqui.</p>
     <div id="editor"></div>
-    <button class="btn" onclick="go('export');renderPreview()">Ver preview & exportar →</button>
+    <button class="btn" onclick="go('export');renderPreview()">Ver preview & exportar <i data-lucide="arrow-right"></i></button>
   </div>
 </section>
 
@@ -379,10 +396,10 @@
 <section class="tab" id="tab-export">
   <div class="card">
     <div class="toolbar">
-      <button class="btn" onclick="downloadHtml()">⬇️ Baixar HTML do e-mail</button>
-      <button class="btn cyan" onclick="copyHtml()">📋 Copiar HTML</button>
-      <button class="btn sec" onclick="copyText()">📄 Copiar texto puro</button>
-      <button class="btn sec" onclick="renderPreview()">🔄 Atualizar preview</button>
+      <button class="btn" onclick="downloadHtml()"><i data-lucide="download"></i> Baixar HTML do e-mail</button>
+      <button class="btn cyan" onclick="copyHtml()"><i data-lucide="clipboard"></i> Copiar HTML</button>
+      <button class="btn sec" onclick="copyText()"><i data-lucide="file-text"></i> Copiar texto puro</button>
+      <button class="btn sec" onclick="renderPreview()"><i data-lucide="refresh-cw"></i> Atualizar preview</button>
       <div class="spacer"></div>
       <span class="status" id="exp-status"></span>
     </div>
@@ -394,7 +411,12 @@
 </section>
 
 </main>
+<!-- Ícones estilo Apple/SF (Lucide) para a interface do Studio -->
+<script src="https://unpkg.com/lucide@latest"></script>
 <script>
+/* ===================== ÍCONES (Lucide) ===================== */
+function refreshIcons(){ try{ window.lucide && lucide.createIcons(); }catch(e){} }
+
 /* ===================== ESTADO ===================== */
 const S = {
   items: [],     // {id,titulo,link,fonte,resumo,data,editoria,sel,star,vote,editing}
@@ -733,6 +755,7 @@ function renderItems(){
   let list=S.items.filter(i=>(!fEd||i.editoria===fEd)&&(!fSel||i.sel)&&(!fTx||(i.titulo+i.resumo).toLowerCase().includes(fTx)));
   list.sort((a,b)=>scoreItem(b)-scoreItem(a)); // preferências aprendidas primeiro
   document.getElementById('items-list').innerHTML=list.map(itemRow).join('')||'<p class="hint">Nenhuma notícia — volte à aba Coleta.</p>';
+  refreshIcons();
   const sel=S.items.filter(i=>i.sel).length;
   setStatus('cur-status',sel+' selecionadas');
 }
@@ -751,13 +774,13 @@ function itemRow(i){
         ${['DESTAQUE','UPDATES','REDES','NEWS','PLANS'].map(e=>`<option value="${e}" ${i.editoria===e?'selected':''}>${ED_LABEL(e)}</option>`).join('')}
       </select>
       <div class="ni-actions">
-        <button class="vote up ${i.vote===1?'on':''}" title="quero mais notícias assim" onclick="curaVote(${i.id},1)">👍</button>
-        <button class="vote down" title="não quero: troca por outra dos feeds" onclick="curaVote(${i.id},-1)">👎</button>
-        <span class="star ${i.star?'on':''}" title="matéria principal da editoria" onclick="setStar(${i.id})">⭐</span>
+        <button class="vote up ${i.vote===1?'on':''}" title="quero mais notícias assim" onclick="curaVote(${i.id},1)"><i data-lucide="thumbs-up"></i></button>
+        <button class="vote down" title="não quero: troca por outra dos feeds" onclick="curaVote(${i.id},-1)"><i data-lucide="thumbs-down"></i></button>
+        <span class="star ${i.star?'on':''}" title="matéria principal da editoria" onclick="setStar(${i.id})"><i data-lucide="star"></i></span>
       </div>
       <div class="ni-actions">
-        ${i.link?`<a class="btn-sm acc" href="${esc(i.link)}" target="_blank">↗ Acessar</a>`:''}
-        <button class="btn-sm" onclick="editItem(${i.id})">✏️ Editar</button>
+        ${i.link?`<a class="btn-sm acc" href="${esc(i.link)}" target="_blank"><i data-lucide="external-link"></i> Acessar</a>`:''}
+        <button class="btn-sm" onclick="editItem(${i.id})"><i data-lucide="pencil"></i> Editar</button>
       </div>
     </div>
   </div>`;
@@ -1028,6 +1051,7 @@ function renderDashboard(){
       <div class="portal-grid">${list.map(n=>portalCard(ed,n)).join('')||'<p class="hint">Sem notícias nesta editoria.</p>'}</div>
     </div>`;
   }).join('');
+  refreshIcons();
 }
 function portalCard(ed,n){
   const k=itemKey(n), v=lastVote(k,ed), sc=scoreItem(n);
@@ -1041,10 +1065,10 @@ function portalCard(ed,n){
       <div class="chamada">${esc(n.titulo)}</div>
       <div class="excerpt">${esc(n.resumo||'')}</div>
       <div class="pc-foot">
-        <button class="vote up ${v===1?'on':''}" title="quero mais notícias assim" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',1)">👍</button>
-        <button class="vote down ${v===-1?'on':''}" title="não quero esse tipo" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',-1)">👎</button>
+        <button class="vote up ${v===1?'on':''}" title="quero mais notícias assim" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',1)"><i data-lucide="thumbs-up"></i></button>
+        <button class="vote down ${v===-1?'on':''}" title="não quero esse tipo" onclick="voteDash(this,'${ed}','${encodeURIComponent(k)}',-1)"><i data-lucide="thumbs-down"></i></button>
         <span class="spacer"></span>
-        ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank">↗ Acessar</a>`:''}
+        ${n.link?`<a class="btn-sm acc" href="${esc(n.link)}" target="_blank"><i data-lucide="external-link"></i> Acessar</a>`:''}
       </div>
     </div>
   </div>`;
@@ -1240,14 +1264,14 @@ function renderEditor(){
     </div>
     <div class="ov-tools">
       <input type="text" id="ovq-${k}" value="${esc(sug||'')}" placeholder="termo de busca da imagem">
-      <button class="btn-sm" type="button" onclick="openverse('${k}')">🖼️ Buscar sugestões</button>
+      <button class="btn-sm" type="button" onclick="openverse('${k}')"><i data-lucide="image"></i> Buscar sugestões</button>
     </div>
     <div class="ov-gallery" id="ov-${k}"></div></div>`;
   document.getElementById('editor').innerHTML=`
     ${fld('assunto','Assunto do e-mail',e.assunto)}
     <div class="ed-field"><label>Pre-header <span style="color:var(--muted);font-weight:400">· fixo no padrão da Make</span></label>
       <input type="text" readonly value="${esc('Ano '+cfg('cfg-ano')+' - Edição #'+cfg('cfg-edicao')+' - A Newsletter da Make')}"></div>
-    <div class="ed-sec"><h3>🖼️ Imagens da edição</h3>
+    <div class="ed-sec"><h3><i data-lucide="image"></i> Imagens da edição</h3>
       <p class="hint">Como na referência: uma imagem de abertura (banner do destaque) e uma por editoria. Cole URLs de imagens hospedadas — para o envio real, suba na biblioteca de imagens do RD Station e copie o link de lá (e-mail não aceita imagem local).</p>
       ${imgRow('banner','Banner / Destaque',e.destaque?.sugestao_imagem)}
       ${imgRow('updates','Updates',e.updates?.sugestao_imagem)}
@@ -1260,7 +1284,7 @@ function renderEditor(){
     <div class="ed-sec"><h3>Abertura</h3>
       ${fld('intro.saudacao','Saudação',e.intro?.saudacao||'')}
       ${fld('intro.texto','Texto',e.intro?.texto||'',1)}</div>
-    ${e.campanha?`<div class="ed-sec"><h3>Box da campanha 🎗️</h3>
+    ${e.campanha?`<div class="ed-sec"><h3><i data-lucide="ribbon"></i> Box da campanha</h3>
       ${fld('campanha.titulo','Título do box',e.campanha?.titulo||'')}
       ${fld('campanha.texto','Texto',e.campanha?.texto||'',1)}</div>`:''}
     <div class="ed-sec"><h3>Destaque <span class="pill DESTAQUE">DESTAQUE</span></h3>
@@ -1293,6 +1317,7 @@ function renderEditor(){
     };
   });
   bindBullets();
+  refreshIcons();
 }
 function brow(sec,i,b){
   return `<div class="bullet-row" data-b="${sec}.${i}">
@@ -1480,6 +1505,8 @@ dashFromCache();   // pré-carrega o cache do Supabase pra abrir o dashboard ins
 supaSyncPrefs();
 // auto-refresh: checa a cada 30 min e repõe dos feeds quando o cache passa de 6h
 setInterval(autoTickDashboard, 30*60*1000);
+refreshIcons();    // desenha os ícones Lucide do layout estático
+window.addEventListener('load',refreshIcons);
 </script>
 </body>
 </html>

@@ -42,6 +42,12 @@ Cada bloco aceita uma **imagem de abertura** (banner + uma por editoria). O GPT 
 
 O **pre-header** é fixo no padrão `Ano X - Edição #XXX - A Newsletter da Make`. As matérias saem com **três parágrafos de até 5 linhas**, e o prompt proíbe travessões, a fórmula "não é X, é Y" e clichês típicos de IA.
 
+## Identidade visual (Make ID)
+
+A interface do Studio usa a fonte oficial da Make, **Uni Sans** (carregada via CDN; dá para trocar por arquivos `.woff2` oficiais self-hosted para fidelidade total), e ícones de linha **Lucide** (estilo próximo ao SF Symbols da Apple) no lugar de emojis em toda a interface. O **e-mail/preview** e os bullets da newsletter mantêm os emojis de propósito, porque fazem parte do conteúdo enviado.
+
+Paleta da Make ID extraída da auditoria, disponível em variáveis CSS para o tema: navy `#070D42`, vermelho coral `#EA3428` (claro `#EB6057`), fundo claro `#F2F3F2`.
+
 ## Como publicar (GitHub Pages)
 
 1. Suba o `index.html` na raiz do repositório.
