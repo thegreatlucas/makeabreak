@@ -215,6 +215,9 @@
   .bullet-row .grip:active{cursor:grabbing}
   .bullet-row.dragging{opacity:.45}
   [data-bsec].dragover{outline:2px dashed var(--red);outline-offset:3px;border-radius:8px;background:rgba(234,52,40,.05)}
+  .ed-sec h3 .sw{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-weight:600;cursor:pointer}
+  .ed-sec h3 .sw input{width:auto;height:16px;accent-color:var(--ok)}
+  .ed-sec.sec-off{opacity:.55}
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -291,6 +294,9 @@
       <div><label>Supabase Project URL</label><input type="text" id="cfg-supa-url" placeholder="https://xxxx.supabase.co"></div>
       <div><label>Supabase anon key</label><input type="password" id="cfg-supa-key" placeholder="eyJhbGciOi..."></div>
     </div>
+    <label>Chave do Pexels (sugestões de imagem grandes)</label>
+    <input type="password" id="cfg-pexels-key" placeholder="cole sua API key gratuita do Pexels">
+    <p class="hint">As sugestões de imagem ficam muito melhores com uma chave gratuita do Pexels (imagens grandes e ilustrativas, sem depender de proxy). Crie em <b>pexels.com/api</b> e cole aqui. Sem ela, o app tenta Bing/Openverse (menos confiável).</p>
   </div>
 
   <div class="card">
@@ -370,7 +376,7 @@
       <div><label>Fonte</label><input type="text" id="man-fonte" placeholder="ex.: The Verge"></div>
       <div><label>Editoria</label>
         <select id="man-editoria">
-          <option>DESTAQUE</option><option selected>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
+          <option selected>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
         </select>
       </div>
     </div>
@@ -388,13 +394,18 @@
     <div class="toolbar">
       <select id="filtro-editoria" onchange="renderItems()">
         <option value="">Todas as editorias</option>
-        <option>DESTAQUE</option><option>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
+        <option>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
       </select>
       <select id="filtro-sel" onchange="renderItems()">
         <option value="">Todas</option>
         <option value="sel">Só selecionadas</option>
       </select>
       <input type="text" id="filtro-busca" placeholder="filtrar por palavra..." style="max-width:240px" oninput="renderItems()">
+      <select id="cur-sort" onchange="renderItems()" title="ordenar">
+        <option value="rel">Relevância (afinidade)</option>
+        <option value="novo">Mais recentes</option>
+        <option value="antigo">Mais antigas</option>
+      </select>
       <div class="spacer"></div>
       <span class="status" id="cur-status"></span>
     </div>
@@ -402,7 +413,7 @@
     <div class="toolbar" style="margin-bottom:8px">
       <span style="font-size:13px;color:var(--muted);font-weight:600">Trazer nova notícia de:</span>
       <select id="sug-ed">
-        <option>DESTAQUE</option><option>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
+        <option>UPDATES</option><option value="REDES">REDES SOCIAIS</option><option>NEWS</option><option>PLANS</option>
       </select>
       <button class="btn sec" style="margin-top:0" onclick="bringSuggestion()"><i data-lucide="plus"></i> Buscar candidato</button>
     </div>
@@ -464,9 +475,12 @@ const S = {
   items: [],     // {id,titulo,link,fonte,resumo,data,editoria,sel,star,vote,editing}
   edition: null, // objeto gerado pelo GPT
   reserve: [],   // notícias extras dos feeds (reposição quando dá thumbs down)
-  trending: {DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]} // dashboard
+  trending: {UPDATES:[],REDES:[],NEWS:[],PLANS:[]} // dashboard
 };
 let _id = 1;
+const RECENT_DAYS = 5;   // só notícias dos últimos 5 dias
+const MAX_LINKS   = 60;  // teto de links coletados (precisamos de 24 no total)
+const MAX_STARS   = 2;   // até 2 destaques (estrelas) por editoria
 
 /* ===================== CREDENCIAIS PADRÃO (deploy) ===================== */
 /* Preenchido no deploy com o projeto Supabase da Make. A anon key é pública
@@ -490,7 +504,7 @@ function setStatus(id,msg,cls){const el=document.getElementById(id);el.textConte
 function log(id,msg){const el=document.getElementById(id);el.classList.add('show');el.textContent+=msg+'\n';el.scrollTop=el.scrollHeight;}
 
 /* ===================== CONFIG ===================== */
-const CFG_FIELDS=['cfg-key','cfg-model','cfg-model-search','cfg-ano','cfg-edicao','cfg-mergetag','cfg-tema','cfg-tipo-tema','cfg-cor','cfg-supa-url','cfg-supa-key'];
+const CFG_FIELDS=['cfg-key','cfg-model','cfg-model-search','cfg-ano','cfg-edicao','cfg-mergetag','cfg-tema','cfg-tipo-tema','cfg-cor','cfg-supa-url','cfg-supa-key','cfg-pexels-key'];
 function saveConfig(){
   CFG_FIELDS.forEach(f=>localStorage.setItem('mab_'+f,document.getElementById(f).value));
   localStorage.setItem('mab_tipo',getTipo());
@@ -534,10 +548,10 @@ const FEEDS=[
   {nome:'Startupi',url:'https://startupi.com.br/feed/',ed:'UPDATES',on:false},
   // Negócios (NEWS)
   {nome:'Exame',url:'https://exame.com/feed/',ed:'NEWS',on:true},
-  // Ciência e grandes acontecimentos (DESTAQUE)
-  {nome:'Superinteressante',url:'https://super.abril.com.br/feed/',ed:'DESTAQUE',on:true},
-  {nome:'G1 Ciência e Saúde',url:'https://g1.globo.com/rss/g1/ciencia-e-saude/',ed:'DESTAQUE',on:true},
-  {nome:'G1 Tecnologia',url:'https://g1.globo.com/rss/g1/tecnologia/',ed:'DESTAQUE',on:true},
+  // Ciência e grandes acontecimentos
+  {nome:'Superinteressante',url:'https://super.abril.com.br/feed/',ed:'NEWS',on:true},
+  {nome:'G1 Ciência e Saúde',url:'https://g1.globo.com/rss/g1/ciencia-e-saude/',ed:'NEWS',on:true},
+  {nome:'G1 Tecnologia',url:'https://g1.globo.com/rss/g1/tecnologia/',ed:'UPDATES',on:true},
   // Cultura digital e curiosidades (NEWS)
   {nome:'Hypeness',url:'https://www.hypeness.com.br/feed/',ed:'NEWS',on:true},
   // Cultura e lançamentos (PLANS)
@@ -559,6 +573,8 @@ renderFeeds();
 const PROXIES=[
   u=>'https://api.allorigins.win/raw?url='+encodeURIComponent(u),
   u=>'https://corsproxy.io/?url='+encodeURIComponent(u),
+  u=>'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(u),
+  u=>'https://thingproxy.freeboard.io/fetch/'+u,
 ];
 async function fetchWithProxy(url){
   for(const p of PROXIES){
@@ -584,6 +600,22 @@ function looksEnglish(s){
 function deacc(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');}
 const PROMO_RE=/(promoc|em promo|\bofertas?\b|ofertao|\bdescont(o|os|ao|oes)|\bcupom\b|cupons|pechinch|frete gratis|queima de estoque|saldao|menor preco|mais barat[oa]|preco .{0,25}(cai|caiu|despenc|baix|menor)|(caiu?|despencou|baixou|despencaram) .{0,25}(de )?(preco|valor|r\$)|black friday|cyber monday|\d+\s?%\s?(off|de desconto)|parcelad|a venda por|sai por r\$|por apenas r\$|por r\$\s?\d|de r\$\s?[\d.,]+\s?por|achadinh|melhores (ofertas|precos)|onde comprar|vale a pena comprar|leve \d+ pague)/;
 function isPromo(n){const s=deacc((n&&n.titulo||'')+' '+(n&&n.resumo||''));return PROMO_RE.test(s);}
+// política partidária/institucional — bloqueada, EXCETO quando é sobre redes sociais
+const POL_RE=/\b(eleic|eleitoral|deputad|senado federal|camara dos deputados|congresso nacional|presidente da republica|presidencia da republica|stf\b|supremo tribunal|\btse\b|ministro d|ministerio d|governo federal|partido (politico|dos|de)|comunis|fascis|\bgolpe\b|impeachment|urna eletronica|bolsonaro|\blula\b|reforma (tributaria|da previdencia))\b/;
+const SOCIAL_RE=/\b(instagram|tiktok|whatsapp|youtube|linkedin|threads|twitter|facebook|kwai|bluesky|rede social|redes sociais|influenciador|creator)\b/;
+function isPolitical(n){
+  const s=deacc((n&&n.titulo||'')+' '+(n&&n.resumo||''));
+  if(!POL_RE.test(s))return false;
+  if(n&&n.editoria==='REDES')return false;   // exceção: redes sociais
+  if(SOCIAL_RE.test(s))return false;          // exceção: assunto ligado a redes sociais
+  return true;
+}
+// detecção de notícias semelhantes (mesma história, fontes diferentes)
+function sigOf(n){ if(n._sig)return n._sig; n._sig=new Set(tokenize(n.titulo)); return n._sig; }
+function similarSets(a,b){ if(!a.size||!b.size)return false; let inter=0; a.forEach(x=>{if(b.has(x))inter++;}); return inter>=3 && inter/Math.min(a.size,b.size)>=0.6; }
+function tooSimilar(n,list){ const s=sigOf(n); return list.some(x=>x!==n && similarSets(s,sigOf(x))); }
+// descarta de uma vez: promoção, política (salvo redes) e duplicata semelhante
+function blocked(n,list){ return isPromo(n)||isPolitical(n)||(list&&tooSimilar(n,list)); }
 // fetch que aceita respostas curtas (direto e, se falhar, pelos proxies de CORS)
 async function fetchTextAny(url){
   try{const r=await fetch(url,{signal:AbortSignal.timeout(12000)});if(r.ok){const t=await r.text();if(t)return t;}}catch(e){}
@@ -647,7 +679,8 @@ function recentOnly(items,days){
 }
 function addItems(arr){
   arr.forEach(n=>{
-    if(isPromo(n)) return;                                       // descarta oferta/promoção
+    if(S.items.length>=MAX_LINKS) return;                        // teto de 60 links
+    if(blocked(n,S.items)) return;                               // promoção, política ou semelhante
     if(S.items.some(x=>x.link===n.link&&n.link)) return;        // dedup por link
     if(S.items.some(x=>x.titulo.toLowerCase()===n.titulo.toLowerCase())) return;
     S.items.push({id:_id++,sel:false,star:false,...n});
@@ -669,7 +702,7 @@ async function fetchFeeds(){
   await Promise.all(ativos.map(async f=>{
     try{
       const xml=await fetchWithProxy(f.url);
-      const items=recentOnly(parseRss(xml,f.nome,f.ed),8).slice(0,15);
+      const items=recentOnly(parseRss(xml,f.nome,f.ed),RECENT_DAYS).slice(0,15);
       addItems(items);ok++;
       log('coleta-log',`✔ ${f.nome}: ${items.length} notícias (últimos 8 dias)`);
     }catch(e){log('coleta-log',`✘ ${f.nome}: ${e.message}`);}
@@ -687,12 +720,12 @@ async function translateColeta(){
 const GN_BASE='https://news.google.com/rss';
 const GN_PARAMS='hl=pt-BR&gl=BR&ceid=BR:pt-419';
 const GN_QUERIES={
-  DESTAQUE:[`${GN_BASE}/headlines/section/topic/TECHNOLOGY?${GN_PARAMS}`,
-            `${GN_BASE}/headlines/section/topic/SCIENCE?${GN_PARAMS}`],
-  UPDATES:[`${GN_BASE}/search?q=${encodeURIComponent('"inteligência artificial" OR "marketing digital" OR "nova ferramenta" when:7d')}&${GN_PARAMS}`],
-  REDES:[`${GN_BASE}/search?q=${encodeURIComponent('(Instagram OR TikTok OR WhatsApp OR YouTube OR LinkedIn OR Threads) (recurso OR novidade OR atualização OR teste) when:7d')}&${GN_PARAMS}`],
-  NEWS:[`${GN_BASE}/search?q=${encodeURIComponent('(viral OR meme OR "cultura digital" OR tendência OR publicidade) when:7d')}&${GN_PARAMS}`],
-  PLANS:[`${GN_BASE}/search?q=${encodeURIComponent('(estreia OR lançamento OR show OR festival OR exposição) (filme OR série OR música OR cinema) Brasil when:7d')}&${GN_PARAMS}`]
+  UPDATES:[`${GN_BASE}/search?q=${encodeURIComponent('"inteligência artificial" OR "marketing digital" OR "nova ferramenta" OR tecnologia when:5d')}&${GN_PARAMS}`,
+           `${GN_BASE}/headlines/section/topic/TECHNOLOGY?${GN_PARAMS}`],
+  REDES:[`${GN_BASE}/search?q=${encodeURIComponent('(Instagram OR TikTok OR WhatsApp OR YouTube OR LinkedIn OR Threads) (recurso OR novidade OR atualização OR teste) when:5d')}&${GN_PARAMS}`],
+  NEWS:[`${GN_BASE}/search?q=${encodeURIComponent('(viral OR meme OR "cultura digital" OR tendência OR ciência OR descoberta) when:5d')}&${GN_PARAMS}`,
+        `${GN_BASE}/headlines/section/topic/SCIENCE?${GN_PARAMS}`],
+  PLANS:[`${GN_BASE}/search?q=${encodeURIComponent('(estreia OR lançamento OR show OR festival OR exposição) (filme OR série OR música OR cinema) Brasil when:5d')}&${GN_PARAMS}`]
 };
 function parseGNews(xmlText,editoria){
   const doc=new DOMParser().parseFromString(xmlText,'text/xml');
@@ -718,7 +751,7 @@ async function gnewsSearch(){
     for(const u of urls){
       try{
         const xml=await fetchWithProxy(u);
-        const items=recentOnly(parseGNews(xml,ed),8).slice(0,12);
+        const items=recentOnly(parseGNews(xml,ed),RECENT_DAYS).slice(0,12);
         addItems(items);got+=items.length;
       }catch(e){fail++;}
     }
@@ -758,8 +791,7 @@ async function openaiResponses(key,body,signal){
   return text;
 }
 const ED_BRIEF={
-  DESTAQUE:'3 grandes acontecimentos da semana com repercussão ampla: descobertas científicas, marcos, premiações, mudanças significativas em tecnologia, assuntos muito comentados',
-  UPDATES:'5 notícias úteis profissionalmente: IA, tecnologia, ferramentas digitais, marketing, CRM, automação, dados, estudos, cursos gratuitos, inovação',
+  UPDATES:'6 notícias úteis profissionalmente: IA, tecnologia, ferramentas digitais, marketing, CRM, automação, dados, estudos, cursos gratuitos, inovação, descobertas e grandes acontecimentos de tecnologia',
   REDES:'5 novidades de redes sociais: funcionalidades novas, mudanças de algoritmo, estudos de comportamento e dados de mercado de Instagram, TikTok, YouTube, LinkedIn, WhatsApp, Threads, X e Meta',
   NEWS:'4 assuntos curiosos e comentáveis: tendências, fenômenos da internet, memes relevantes, cultura digital, bastidores do mercado',
   PLANS:'4 lançamentos culturais: filmes, séries, livros, eventos, festivais, música, exposições — priorize o que estreia ou acontece no Brasil'
@@ -786,7 +818,7 @@ async function gptSearch(){
   if(tipo==='especial'&&tipoTema) tipoInstr=` Esta é uma edição especial sobre "${tipoTema}": priorize notícias ligadas a esse tema quando existirem.`;
   if(tipo==='campanha'&&tipoTema) tipoInstr=` Se encontrar notícia recente ligada à campanha "${tipoTema}", inclua.`;
   const mkPrompt=(ed)=>`Pesquise na web e devolva ${ED_BRIEF[ed]}. Apenas notícias REAIS dos últimos 7 dias. OBRIGATÓRIO: título e resumo escritos EM PORTUGUÊS DO BRASIL. NÃO devolva nada em inglês; se a fonte for internacional, traduza o título e o resumo para português antes de responder.${tipoInstr}
-PROIBIDO: ofertas, promoções, descontos, cupons, "preço caiu/baixou", listas de produtos para comprar, "onde comprar", "vale a pena comprar", review de produto pra venda, conteúdo de e-commerce (Amazon, Mercado Livre, Magalu, Shopee, AliExpress, Kabum). Também proibido: política partidária, tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
+PROIBIDO: ofertas, promoções, descontos, cupons, "preço caiu/baixou", listas de produtos para comprar, "onde comprar", "vale a pena comprar", review de produto pra venda, conteúdo de e-commerce (Amazon, Mercado Livre, Magalu, Shopee, AliExpress, Kabum). Também proibido: QUALQUER notícia política, partidária, eleitoral, do governo/congresso/STF ou de políticos (EXCETO quando o assunto for diretamente sobre redes sociais, ex.: regulação de plataformas, eleições e desinformação no Instagram/TikTok/X). Proibido ainda: tragédias, crimes, guerra, acidentes, conteúdo adulto, rumores sem fonte, fofoca de influenciador, brigas online, cancelamentos.
 Prefira fontes brasileiras confiáveis e pouco inclinadas politicamente (Meio & Mensagem, B9, Adnews, Rock Content, Exame, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Superinteressante, G1, Hypeness, Rolling Stone Brasil, Omelete, Jovem Nerd, IGN Brasil).
 Seja rápido: poucas buscas, respostas curtas. Responda SOMENTE com JSON válido, sem markdown:
 {"noticias":[{"titulo":"...","resumo":"1 frase factual","fonte":"veículo","link":"url"}]}`;
@@ -830,7 +862,7 @@ function addManual(){
 
 /* ===================== CURADORIA ===================== */
 const ED_LABEL=e=>e==='REDES'?'REDES SOCIAIS':e;
-const ALL_ED=['DESTAQUE','UPDATES','REDES','NEWS','PLANS'];
+const ALL_ED=['UPDATES','REDES','NEWS','PLANS'];
 const TARGET_SEL=7;                       // meta de links selecionados por editoria
 function selCount(ed){return S.items.filter(i=>i.sel&&i.editoria===ed).length;}
 function edFull(ed){return selCount(ed)>=TARGET_SEL;}
@@ -847,7 +879,10 @@ function renderItems(){
   const fSel=document.getElementById('filtro-sel').value;
   const fTx=document.getElementById('filtro-busca').value.toLowerCase();
   let list=S.items.filter(i=>(!fEd||i.editoria===fEd)&&(!fSel||i.sel)&&(!fTx||(i.titulo+i.resumo).toLowerCase().includes(fTx)));
-  list.sort((a,b)=>scoreItem(b)-scoreItem(a)); // preferências aprendidas primeiro
+  const sort=document.getElementById('cur-sort')?.value||'rel';
+  if(sort==='novo') list.sort((a,b)=>(Date.parse(b.data)||0)-(Date.parse(a.data)||0));
+  else if(sort==='antigo') list.sort((a,b)=>(Date.parse(a.data)||0)-(Date.parse(b.data)||0));
+  else list.sort((a,b)=>scoreItem(b)-scoreItem(a)); // relevância (afinidade aprendida)
   document.getElementById('items-list').innerHTML=list.map(itemRow).join('')||'<p class="hint">Nenhuma notícia — volte à aba Coleta.</p>';
   refreshIcons(); renderProgress();
   const sel=S.items.filter(i=>i.sel).length;
@@ -865,7 +900,7 @@ function itemRow(i){
     </div>
     <div class="ni-side">
       <select onchange="setEd(${i.id},this.value)">
-        ${['DESTAQUE','UPDATES','REDES','NEWS','PLANS'].map(e=>`<option value="${e}" ${i.editoria===e?'selected':''}>${ED_LABEL(e)}</option>`).join('')}
+        ${ALL_ED.map(e=>`<option value="${e}" ${i.editoria===e?'selected':''}>${ED_LABEL(e)}</option>`).join('')}
       </select>
       <div class="ni-actions">
         <button class="vote up ${i.vote===1?'on':''}" title="quero mais notícias assim" onclick="curaVote(${i.id},1)"><i data-lucide="thumbs-up"></i></button>
@@ -933,11 +968,16 @@ function tgl(id,k,v){
 function setEd(id,v){const i=S.items.find(x=>x.id===id);i.editoria=v;i.star=false;renderItems();}
 function setStar(id){
   const i=S.items.find(x=>x.id===id);
-  if(!i.star&&!i.sel&&edFull(i.editoria)){
-    setStatus('cur-status',ED_LABEL(i.editoria)+' já fechou em '+TARGET_SEL+' selecionadas. Desmarque uma antes.','err');return;
+  if(!i.star){
+    if(!i.sel&&edFull(i.editoria)){
+      setStatus('cur-status',ED_LABEL(i.editoria)+' já fechou em '+TARGET_SEL+' selecionadas. Desmarque uma antes.','err');return;
+    }
+    const stars=S.items.filter(x=>x.editoria===i.editoria&&x.star).length;
+    if(stars>=MAX_STARS){
+      setStatus('cur-status',ED_LABEL(i.editoria)+' já tem '+MAX_STARS+' destaques (máx.). Desmarque uma estrela antes.','err');return;
+    }
   }
-  S.items.filter(x=>x.editoria===i.editoria&&x.id!==id).forEach(x=>x.star=false);
-  i.star=!i.star;if(i.star)i.sel=true;renderItems();
+  i.star=!i.star;if(i.star)i.sel=true;else i._principal=false;renderItems();
 }
 function esc(s){return String(s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 function fmtDate(d){const x=new Date(d);return isNaN(x)?'':x.toLocaleDateString('pt-BR');}
@@ -952,7 +992,7 @@ async function bringSuggestion(ed){
   _suggesting=true;
   host.innerHTML=`<div class="sug-card"><span class="status"><span class="spin"></span> buscando candidato de ${ED_LABEL(ed)}...</span></div>`;
   let n=pickReserve(ed);
-  if(!n){for(const days of [15,30,60,120,3650]){await fetchMoreForEditoria(ed,days,pushReserve);n=pickReserve(ed);if(n)break;}}
+  if(!n){await fetchMoreForEditoria(ed,RECENT_DAYS,pushReserve);n=pickReserve(ed);}
   _suggesting=false;
   if(!n){host.innerHTML=`<div class="sug-card">Sem mais notícias novas de ${ED_LABEL(ed)} nos feeds.</div>`;return;}
   await ensurePt(n);
@@ -1091,7 +1131,7 @@ function isKnownNews(n){
   if(S.reserve.some(x=>itemKey(x)===k))return true;
   return false;
 }
-function pushReserve(arr){arr.forEach(n=>{if(!isKnownNews(n)&&!isPromo(n))S.reserve.push(n);});}
+function pushReserve(arr){arr.forEach(n=>{if(isKnownNews(n)||isPromo(n)||isPolitical(n))return;if(tooSimilar(n,S.items)||tooSimilar(n,S.reserve))return;S.reserve.push(n);});}
 function pickReserve(ed){
   let best=-1,bd=-Infinity;
   S.reserve.forEach((n,i)=>{if(n.editoria!==ed)return;const d=Date.parse(n.data)||0;if(d>=bd){bd=d;best=i;}});
@@ -1101,11 +1141,9 @@ function addReplacement(n){S.items.push({id:_id++,sel:false,star:false,vote:0,_n
 async function bringReplacement(ed){
   let n=pickReserve(ed);
   if(n){await ensurePt(n);addReplacement(n);return true;}
-  for(const days of [15,30,60,120,3650]){ // supera os 7 dias quando os feeds recentes acabam
-    await fetchMoreForEditoria(ed,days,pushReserve);
-    n=pickReserve(ed);
-    if(n){await ensurePt(n);addReplacement(n);return true;}
-  }
+  await fetchMoreForEditoria(ed,RECENT_DAYS,pushReserve);   // só dentro dos últimos 5 dias
+  n=pickReserve(ed);
+  if(n){await ensurePt(n);addReplacement(n);return true;}
   return false;
 }
 
@@ -1145,7 +1183,7 @@ async function dashFromCache(){
     const r=await fetch(url+'/rest/v1/news_cache?select=item_key,editoria,titulo,fonte,link,resumo,imagem,data,updated_at&order=data.desc.nullslast&limit=600',{headers:supaHeaders()});
     if(!r.ok)return;
     const rows=await r.json();
-    const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]}; let maxU=0;
+    const t={UPDATES:[],REDES:[],NEWS:[],PLANS:[]}; let maxU=0;
     rows.forEach(n=>{ if(REJECTED.has(n.item_key)||isPromo(n))return; if(t[n.editoria])t[n.editoria].push(n);
       const u=Date.parse(n.updated_at)||0; if(u>maxU)maxU=u; });
     if(rows.length){
@@ -1159,21 +1197,17 @@ async function dashFromCache(){
 async function refreshDashboard(){
   setStatus('dash-status','Atualizando dos feeds...');
   const lg=document.getElementById('dash-log'); if(lg)lg.textContent='';
-  const t={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
+  const t={UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
   const seen=new Set();
-  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k)||isPromo(n))return;seen.add(k);(t[n.editoria]||(t[n.editoria]=[])).push(n);});
+  const add=arr=>arr.forEach(n=>{const k=itemKey(n);if(!k||seen.has(k)||REJECTED.has(k))return;if(isPromo(n)||isPolitical(n))return;const bucket=t[n.editoria];if(!bucket||tooSimilar(n,bucket))return;seen.add(k);bucket.push(n);});
   await Promise.allSettled(FEEDS.map(async f=>{
-    try{const xml=await fetchWithProxy(f.url);add(recentOnly(parseRss(xml,f.nome,f.ed),14).slice(0,18));}
+    try{const xml=await fetchWithProxy(f.url);add(recentOnly(parseRss(xml,f.nome,f.ed),RECENT_DAYS).slice(0,18));}
     catch(e){log('dash-log',`✘ ${f.nome}`);}
   }));
   await Promise.allSettled(Object.entries(GN_QUERIES).map(async([ed,urls])=>{
-    for(const u of urls){try{const xml=await fetchWithProxy(u);add(recentOnly(parseGNews(xml,ed),14).slice(0,18));}catch(e){}}
+    for(const u of urls){try{const xml=await fetchWithProxy(u);add(recentOnly(parseGNews(xml,ed),RECENT_DAYS).slice(0,18));}catch(e){}}
   }));
-  for(const ed of Object.keys(GN_QUERIES)){
-    let win=21;
-    while((t[ed]||[]).length<10 && win<=120){await fetchMoreForEditoria(ed,win,add);win+=40;}
-    log('dash-log',`${(t[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(t[ed]||[]).length}`);
-  }
+  for(const ed of ALL_ED) log('dash-log',`${(t[ed]||[]).length>=10?'✔':'•'} ${ED_LABEL(ed)}: ${(t[ed]||[]).length}`);
   setStatus('dash-status','Traduzindo o que veio em inglês...');
   await translateAll([].concat(...Object.values(t)));   // nada em inglês: traduz o que escapar
   S.trending=t; _cacheTime=Date.now(); renderDashboard();
@@ -1201,7 +1235,7 @@ async function cacheNewsToSupa(t){
 function autoTickDashboard(){ if(_dashLoaded||S.trending&&Object.values(S.trending).some(a=>a.length)) loadDashboard(false); }
 function renderDashboard(){
   const host=document.getElementById('dash-blocks'); if(!host)return;
-  const eds=['DESTAQUE','UPDATES','REDES','NEWS','PLANS'];
+  const eds=ALL_ED;
   if(eds.every(ed=>!(S.trending[ed]||[]).length)){
     host.innerHTML='<div class="card"><p class="hint">Carregando as notícias em alta... se demorar, clique em <b>Carregar / atualizar tendências</b>.</p></div>';return;
   }
@@ -1246,23 +1280,41 @@ async function voteDash(btn,ed,kEnc,val){
   if(pb){pb.outerHTML=html;} else if(html){card.querySelector('h2').insertAdjacentHTML('afterend',html);}
 }
 
-/* ===================== GALERIA DE IMAGENS (Openverse, grátis) ===================== */
+/* ===================== GALERIA DE IMAGENS (busca ampla na web) ===================== */
+// busca imagens GRANDES e ilustrativas. Pexels (com chave, direto e confiável) é o
+// principal; Bing (via proxy de CORS) e Openverse entram como reserva.
+async function webImageSearch(term){
+  const out=[]; const seen=new Set();
+  const push=u=>{ if(u){u=String(u).replace(/\\\//g,'/').replace(/&amp;/g,'&'); if(/^https?:\/\//.test(u)&&!seen.has(u)){seen.add(u);out.push(u);}} };
+  const pk=cfg('cfg-pexels-key');
+  // 1) Pexels (recomendado): grandes, ilustrativas, sem depender de proxy
+  if(pk){ try{
+    const r=await fetch('https://api.pexels.com/v1/search?per_page=24&size=large&locale=pt-BR&query='+encodeURIComponent(term),{headers:{Authorization:pk}});
+    if(r.ok){const j=await r.json();(j.photos||[]).forEach(p=>push(p.src&&(p.src.large2x||p.src.original||p.src.large)));}
+  }catch(e){} }
+  // 2) Bing Images (web ampla, imagens grandes) via proxy de CORS
+  if(out.length<6){ try{
+    const html=await fetchTextAny('https://www.bing.com/images/search?q='+encodeURIComponent(term)+'&qft=+filterui:imagesize-large&form=HDRSC2');
+    if(html){ let m,re=/"murl":"(https?:[^"]+?)"/g; while((m=re.exec(html))&&out.length<28)push(m[1]); }
+  }catch(e){} }
+  // 3) Openverse (reserva, licença CC — direto, sem proxy)
+  if(out.length<4){ try{
+    const r=await fetch('https://api.openverse.org/v1/images/?q='+encodeURIComponent(term)+'&page_size=20&mature=false');
+    const j=await r.json(); (j.results||[]).forEach(im=>push(im.url||im.thumbnail));
+  }catch(e){} }
+  return out.slice(0,28);
+}
 async function openverse(k){
   const cont=document.getElementById('ov-'+k); if(!cont)return;
   const term=(document.getElementById('ovq-'+k)?.value||'').trim();
   if(!term){cont.innerHTML='<p class="hint">Digite um termo de busca.</p>';return;}
-  cont.innerHTML='<span class="status"><span class="spin"></span>buscando imagens no Openverse...</span>';
+  cont.innerHTML='<span class="status"><span class="spin"></span>buscando imagens grandes na web...</span>';
   try{
-    const r=await fetch('https://api.openverse.org/v1/images/?q='+encodeURIComponent(term)+'&page_size=12&mature=false');
-    const j=await r.json();
-    const imgs=(j.results||[]);
-    if(!imgs.length){cont.innerHTML=`<p class="hint">Nada encontrado para "${esc(term)}". Tente outro termo.</p>`;return;}
+    const urls=await webImageSearch(term);
+    if(!urls.length){cont.innerHTML=`<p class="hint">Nada encontrado para "${esc(term)}". Tente outro termo.</p>`;return;}
     const cur=S.edition?.imagens?.[k]||'';
-    cont.innerHTML=imgs.map(im=>{
-      const full=im.url||im.thumbnail||'';
-      return `<img class="ov-thumb ${full===cur?'sel':''}" loading="lazy" src="${esc(im.thumbnail||full)}" title="${esc((im.title||'')+' · '+(im.source||''))}" onclick="pickImage('${k}','${encodeURIComponent(full)}',this)" onerror="this.style.display='none'">`;
-    }).join('');
-  }catch(e){cont.innerHTML='<p class="hint">Erro ao buscar no Openverse: '+esc(e.message)+'</p>';}
+    cont.innerHTML=urls.map(u=>`<img class="ov-thumb ${u===cur?'sel':''}" loading="lazy" src="${esc(u)}" referrerpolicy="no-referrer" title="${esc(u)}" onclick="pickImage('${k}','${encodeURIComponent(u)}',this)" onerror="this.remove()">`).join('');
+  }catch(e){cont.innerHTML='<p class="hint">Erro ao buscar imagens: '+esc(e.message)+'</p>';}
 }
 function pickImage(k,enc,el){
   const url=decodeURIComponent(enc);
@@ -1319,9 +1371,9 @@ Como na edição #09 (Outubro Rosa): a abertura menciona que durante o mês a ne
 
 function buildUserPrompt(){
   const sel=S.items.filter(i=>i.sel);
-  const byEd={DESTAQUE:[],UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
-  sel.forEach(i=>byEd[i.editoria].push(i));
-  const fmt=i=>`${i.star?'[PRINCIPAL] ':''}"${i.titulo}" (${i.fonte}${i.link?' — '+i.link:''})${i.resumo?': '+i.resumo:''}`;
+  const byEd={UPDATES:[],REDES:[],NEWS:[],PLANS:[]};
+  sel.forEach(i=>{if(byEd[i.editoria])byEd[i.editoria].push(i);});
+  const fmt=i=>`${i._capa?'[CAPA] ':''}${i.star?'[PRINCIPAL] ':''}"${i.titulo}" (${i.fonte}${i.link?' — '+i.link:''})${i.resumo?': '+i.resumo:''}`;
   const tema=cfg('cfg-tema');
   const extra=document.getElementById('gen-extra').value.trim();
   const tipo=getTipo();
@@ -1329,14 +1381,14 @@ function buildUserPrompt(){
   return `Monte a edição #${cfg('cfg-edicao')} (Ano ${cfg('cfg-ano')}) da Make a Break usando APENAS as notícias abaixo. Não invente fatos além do que está nos resumos; o humor e a tradução de relevância são seus, os fatos são das notícias.
 ${ti}
 ${tema?'CONTEXTO DA SEMANA: '+tema+'\n':''}${extra?'INSTRUÇÕES EXTRAS: '+extra+'\n':''}
-NOTÍCIAS SELECIONADAS:
-DESTAQUE PRINCIPAL:\n${byEd.DESTAQUE.map(fmt).join('\n')||'(nenhuma — escolha a mais forte de UPDATES ou NEWS para o destaque)'}
+NOTÍCIAS SELECIONADAS (não existe editoria "Destaque": o destaque do topo sai das próprias editorias):
 UPDATES:\n${byEd.UPDATES.map(fmt).join('\n')||'(nenhuma)'}
 REDES SOCIAIS:\n${byEd.REDES.map(fmt).join('\n')||'(nenhuma)'}
 NEWS:\n${byEd.NEWS.map(fmt).join('\n')||'(nenhuma)'}
 PLANS:\n${byEd.PLANS.map(fmt).join('\n')||'(nenhuma)'}
 
-Em cada editoria, a notícia marcada [PRINCIPAL] (ou a mais forte, se nenhuma estiver marcada) vira a matéria longa; as demais viram bullets com emoji. Inclua o link da notícia em cada bullet quando houver.
+Em cada editoria, a notícia [PRINCIPAL] mais forte vira a matéria longa (com título próprio); se houver uma SEGUNDA [PRINCIPAL], coloque-a como o PRIMEIRO bullet (o mais importante); as demais viram bullets com emoji. Inclua o link em cada bullet quando houver.
+O bloco "destaque" do topo é a notícia marcada [CAPA]; se nenhuma estiver marcada, escolha a matéria mais forte entre todas as editorias. Não repita a matéria de capa como matéria longa na editoria dela (lá ela pode virar bullet).
 
 LEMBRE DAS REGRAS DE ESCRITA: cada "texto" de matéria tem SEMPRE três parágrafos de até 5 linhas, separados por uma linha em branco (\\n\\n). Nada de travessão, nada da fórmula "não é X, é Y", nada de clichê de IA.
 
@@ -1415,12 +1467,28 @@ function normalizeEdition(e){
 
 /* ===================== EDITOR ===================== */
 // mapeia cada imagem da edição para a editoria correspondente
-const IMG_ED={banner:'DESTAQUE',updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
+const IMG_ED={banner:'CAPA',updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
+// notícia de capa (destaque do topo), escolhida entre os destaques das editorias
+function principalCapa(){
+  const sel=S.items.filter(i=>i.sel);
+  return sel.find(i=>i._capa) || sel.filter(i=>i.star).sort((a,b)=>scoreItem(b)-scoreItem(a))[0] || sel[0] || null;
+}
 // matéria principal (destaque) selecionada de uma editoria
 function principalOf(ed){
+  if(ed==='CAPA') return principalCapa();
   const sel=S.items.filter(i=>i.sel&&i.editoria===ed);
-  return sel.find(i=>i.star) || sel[0] || null;
+  return sel.find(i=>i._principal) || sel.find(i=>i.star) || sel[0] || null;
 }
+function setCapa(id){
+  id=+id; if(!id)return;
+  S.items.forEach(i=>i._capa=false);
+  const i=S.items.find(x=>x.id===id); if(i){i._capa=true;i.sel=true;}
+  renderEditor();
+}
+// ligar/desligar seções da edição (não aparecem no HTML final quando desligadas)
+function off(k){return !!(S.edition&&S.edition.off&&S.edition.off[k]);}
+function toggleSec(k,on){ if(!S.edition)return; S.edition.off=S.edition.off||{}; S.edition.off[k]=!on; const sec=document.querySelector(`[data-sec="${k}"]`); if(sec)sec.classList.toggle('sec-off',!on); }
+function secToggle(k){return `<label class="sw" title="exibir ou ocultar esta seção no e-mail"><input type="checkbox" ${off(k)?'':'checked'} onchange="toggleSec('${k}',this.checked)"><span>exibir</span></label>`;}
 // termo de busca de imagem a partir do TEMA do destaque da editoria
 function imgTerm(title){return String(title||'').replace(/["'“”]/g,'').replace(/\s+/g,' ').trim().split(' ').slice(0,8).join(' ');}
 function imgTermFor(k,sug){const p=principalOf(IMG_ED[k]);return (p&&imgTerm(p.titulo))||sug||'';}
@@ -1436,8 +1504,10 @@ function newsImagesFor(k){
 // troca o destaque da editoria direto na revisão (re-tema as sugestões de imagem)
 function setPrincipalEditor(ed,id){
   id=+id; if(!id)return;
-  S.items.filter(i=>i.editoria===ed).forEach(i=>i.star=false);
-  const i=S.items.find(x=>x.id===id); if(i){i.star=true;i.sel=true;}
+  S.items.filter(i=>i.editoria===ed).forEach(i=>i._principal=false);
+  const i=S.items.find(x=>x.id===id);
+  if(i){ i._principal=true; i.sel=true;
+    if(!i.star && S.items.filter(x=>x.editoria===ed&&x.star).length<MAX_STARS) i.star=true; }
   renderEditor();
 }
 function renderEditor(){
@@ -1447,14 +1517,16 @@ function renderEditor(){
   const bullets=(sec,arr)=>`<div data-bsec="${sec}">${(arr||[]).map((b,i)=>brow(sec,i,b)).join('')}</div><button class="addb" onclick="addBullet('${sec}')">+ bullet</button>`;
   const imgRow=(k,label,sug)=>{
     const ed=IMG_ED[k];
-    const selEd=S.items.filter(i=>i.sel&&i.editoria===ed);
+    const isCapa=ed==='CAPA';
+    let selEd=isCapa?S.items.filter(i=>i.sel&&(i.star||i._capa)):S.items.filter(i=>i.sel&&i.editoria===ed);
+    if(isCapa&&!selEd.length)selEd=S.items.filter(i=>i.sel);
     const p=principalOf(ed);
     const term=imgTermFor(k,sug);
     const newsImgs=newsImagesFor(k);
     return `<div class="ed-field">
     <label>${label}${term?` &nbsp;·&nbsp; tema do destaque: <i>${esc(term)}</i> &nbsp;<a class="imglink" href="https://www.google.com/search?tbm=isch&q=${encodeURIComponent(term)}" target="_blank"><i data-lucide="search"></i> Google Imagens</a> &nbsp;<a class="imglink" href="https://unsplash.com/s/photos/${encodeURIComponent(term)}" target="_blank">Unsplash</a>`:''}</label>
-    ${selEd.length?`<div class="ov-tools"><span class="ov-label" style="margin:0">Destaque de ${ED_LABEL(ed)}:</span>
-      <select onchange="setPrincipalEditor('${ed}',this.value)">${selEd.map(i=>`<option value="${i.id}" ${p&&p.id===i.id?'selected':''}>${esc((i.titulo||'').slice(0,70))}</option>`).join('')}</select></div>`:''}
+    ${selEd.length?`<div class="ov-tools"><span class="ov-label" style="margin:0">${isCapa?'Notícia de capa (destaque do topo)':'Destaque de '+ED_LABEL(ed)}:</span>
+      <select onchange="${isCapa?'setCapa(this.value)':"setPrincipalEditor('"+ed+"',this.value)"}">${selEd.map(i=>`<option value="${i.id}" ${p&&p.id===i.id?'selected':''}>${esc((isCapa?ED_LABEL(i.editoria)+': ':'')+(i.titulo||'').slice(0,64))}</option>`).join('')}</select></div>`:''}
     <div style="display:flex;gap:8px;align-items:center">
       <input type="text" data-p="imagens.${k}" value="${esc(e.imagens?.[k]||'')}" placeholder="URL da imagem hospedada (biblioteca do RD Station, Imgur, seu site...)">
       <img class="thumb" data-thumb="${k}" src="${esc(e.imagens?.[k]||'')}" onerror="this.style.display='none'" ${e.imagens?.[k]?'':'style="display:none"'}>
@@ -1479,34 +1551,35 @@ function renderEditor(){
       ${imgRow('news','News',e.news?.sugestao_imagem)}
       ${imgRow('plans','Plans',e.plans?.sugestao_imagem)}
     </div>
-    <div class="ed-sec"><h3>Banner — highlights <span class="pill DESTAQUE">TOPO</span></h3>
+    <div class="ed-sec ${off('highlights')?'sec-off':''}" data-sec="highlights"><h3>Banner — highlights <span class="pill DESTAQUE">TOPO</span>${secToggle('highlights')}</h3>
       ${(e.highlights||[]).map((h,i)=>fld('highlights.'+i,'Highlight '+(i+1),h)).join('')}</div>
-    <div class="ed-sec"><h3>Abertura</h3>
+    <div class="ed-sec ${off('abertura')?'sec-off':''}" data-sec="abertura"><h3>Abertura${secToggle('abertura')}</h3>
       ${fld('intro.saudacao','Saudação',e.intro?.saudacao||'')}
       ${fld('intro.texto','Texto',e.intro?.texto||'',1)}</div>
-    ${e.campanha?`<div class="ed-sec"><h3><i data-lucide="ribbon"></i> Box da campanha</h3>
+    ${e.campanha?`<div class="ed-sec ${off('campanha')?'sec-off':''}" data-sec="campanha"><h3><i data-lucide="ribbon"></i> Box da campanha${secToggle('campanha')}</h3>
       ${fld('campanha.titulo','Título do box',e.campanha?.titulo||'')}
       ${fld('campanha.texto','Texto',e.campanha?.texto||'',1)}</div>`:''}
-    <div class="ed-sec"><h3>Destaque <span class="pill DESTAQUE">DESTAQUE</span></h3>
+    <div class="ed-sec ${off('destaque')?'sec-off':''}" data-sec="destaque"><h3>Destaque <span class="pill DESTAQUE">DESTAQUE</span>${secToggle('destaque')}</h3>
       ${fld('destaque.titulo','Título',e.destaque?.titulo||'')}
       ${fld('destaque.texto','Texto',e.destaque?.texto||'',1)}</div>
     <p class="hint" style="margin:14px 0 6px"><i data-lucide="grip-vertical"></i> Dica: arraste os bullets pela alça para mover um link de uma editoria para outra.</p>
-    <div class="ed-sec"><h3>Updates <span class="pill UPDATES">UPDATES</span></h3>
+    <div class="ed-sec ${off('updates')?'sec-off':''}" data-sec="updates"><h3>Updates <span class="pill UPDATES">UPDATES</span>${secToggle('updates')}</h3>
       ${fld('updates.titulo','Título',e.updates?.titulo||'')}
       ${fld('updates.texto','Texto',e.updates?.texto||'',1)}
       <label>O que mais você precisa saber hoje:</label>${bullets('updates',e.updates?.bullets)}</div>
-    <div class="ed-sec"><h3>Redes Sociais <span class="pill REDES">REDES</span></h3>
+    <div class="ed-sec ${off('redes')?'sec-off':''}" data-sec="redes"><h3>Redes Sociais <span class="pill REDES">REDES</span>${secToggle('redes')}</h3>
       ${fld('redes.titulo','Título do bloco',e.redes?.titulo||'')}
       <label>E pra ficar por dentro das redes sociais:</label>${bullets('redes',e.redes?.bullets)}</div>
-    <div class="ed-sec"><h3>News <span class="pill NEWS">NEWS</span></h3>
+    <div class="ed-sec ${off('news')?'sec-off':''}" data-sec="news"><h3>News <span class="pill NEWS">NEWS</span>${secToggle('news')}</h3>
       ${fld('news.titulo','Título',e.news?.titulo||'')}
       ${fld('news.texto','Texto',e.news?.texto||'',1)}
       <label>Tem mais News por aqui:</label>${bullets('news',e.news?.bullets)}</div>
-    <div class="ed-sec"><h3>Plans <span class="pill PLANS">PLANS</span></h3>
+    <div class="ed-sec ${off('plans')?'sec-off':''}" data-sec="plans"><h3>Plans <span class="pill PLANS">PLANS</span>${secToggle('plans')}</h3>
       ${fld('plans.titulo','Título',e.plans?.titulo||'')}
       ${fld('plans.texto','Texto',e.plans?.texto||'',1)}
       <label>E pra edificar ainda mais o seu fds:</label>${bullets('plans',e.plans?.bullets)}</div>
-    ${fld('fechamento','Fechamento',e.fechamento||'')}`;
+    <div class="ed-sec ${off('fechamento')?'sec-off':''}" data-sec="fechamento"><h3>Fechamento${secToggle('fechamento')}</h3>
+      ${fld('fechamento','',e.fechamento||'')}</div>`;
   document.getElementById('editor').querySelectorAll('[data-p]').forEach(inp=>{
     inp.oninput=()=>{
       setPath(S.edition,inp.dataset.p,inp.value);
@@ -1654,28 +1727,28 @@ function buildEmailHtml(){
   ${festa}
 
   <!-- banner / imagem de abertura -->
-  ${e.imagens?.banner?`<tr><td style="background:${headerBg};"><img src="${esc(e.imagens.banner)}" width="600" alt="banner" style="display:block;width:100%;height:auto;"></td></tr>`:''}
+  ${(!off('destaque')&&e.imagens?.banner)?`<tr><td style="background:${headerBg};"><img src="${esc(e.imagens.banner)}" width="600" alt="banner" style="display:block;width:100%;height:auto;"></td></tr>`:''}
 
   <!-- highlights -->
-  ${(e.highlights&&e.highlights.length)?`<tr><td style="background:${hlBg};padding:14px 32px;">
+  ${(!off('highlights')&&e.highlights&&e.highlights.length)?`<tr><td style="background:${hlBg};padding:14px 32px;">
     ${e.highlights.map(h=>`<p style="margin:3px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;font-weight:bold;color:${hlTxt};">${hlPrefix} ${esc(rep(h))}</p>`).join('')}
   </td></tr>`:''}
 
   <!-- abertura -->
-  <tr><td style="padding:28px 32px 0;">
+  ${off('abertura')?'':`<tr><td style="padding:28px 32px 0;">
     <p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#111;">${esc(rep(e.intro?.saudacao||''))}</p>
     <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(rep(e.intro?.texto||'')).replace(/\n/g,'<br>')}</p>
-  </td></tr>
+  </td></tr>`}
 
-  ${boxCampanha}
-  ${mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto)}
-  ${mailSection('UPDATES',secTag,e.updates?.titulo,e.updates?.texto,'O que mais você precisa saber hoje:',e.updates?.bullets,e.imagens?.updates)}
-  ${mailSection('REDES SOCIAIS',secTag,e.redes?.titulo||'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets,e.imagens?.redes)}
-  ${mailSection('NEWS',secTag,e.news?.titulo,e.news?.texto,'Tem mais News por aqui:',e.news?.bullets,e.imagens?.news)}
-  ${mailSection('PLANS',secTag,e.plans?.titulo,e.plans?.texto,'E pra edificar ainda mais o seu fds:',e.plans?.bullets,e.imagens?.plans)}
+  ${off('campanha')?'':boxCampanha}
+  ${off('destaque')?'':mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto)}
+  ${off('updates')?'':mailSection('UPDATES',secTag,e.updates?.titulo,e.updates?.texto,'O que mais você precisa saber hoje:',e.updates?.bullets,e.imagens?.updates)}
+  ${off('redes')?'':mailSection('REDES SOCIAIS',secTag,e.redes?.titulo||'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets,e.imagens?.redes)}
+  ${off('news')?'':mailSection('NEWS',secTag,e.news?.titulo,e.news?.texto,'Tem mais News por aqui:',e.news?.bullets,e.imagens?.news)}
+  ${off('plans')?'':mailSection('PLANS',secTag,e.plans?.titulo,e.plans?.texto,'E pra edificar ainda mais o seu fds:',e.plans?.bullets,e.imagens?.plans)}
 
   <!-- fechamento -->
-  ${e.fechamento?`<tr><td style="padding:26px 32px 8px;">
+  ${(!off('fechamento')&&e.fechamento)?`<tr><td style="padding:26px 32px 8px;">
     <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};font-style:italic;">${esc(rep(e.fechamento))}</p>
   </td></tr>`:''}
 

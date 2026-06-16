@@ -13,15 +13,15 @@ O fluxo completo:
 | **📊 Dashboard** | Notícias em alta de cada editoria (10+ por bloco). Dê 👍/👎 em cada uma para a news aprender que tipo de conteúdo você quer em cada editoria (aprendizado salvo no Supabase) |
 | **1 · Configuração** | Chave da OpenAI, modelos, número/ano da edição, merge tag do RD Station, tipo de edição e credenciais do Supabase |
 | **2 · Coleta** | Busca notícias em feeds RSS das fontes recomendadas, no Google Notícias (grátis) e com GPT web search |
-| **3 · Curadoria** | Você escolhe o que entra, define a editoria, marca a matéria principal (⭐) e dá 👍/👎. No 👎, a news troca a notícia por outra dos feeds (passando dos 7 dias se precisar). O título tem botões **Acessar** e **Editar** |
+| **3 · Curadoria** | Você escolhe o que entra (meta de 7 por editoria), marca até 2 destaques (⭐) por editoria e dá 👍/👎. No 👎, a news troca por outra; dá pra trazer candidatos 1 a 1 (aceita/recusa), ordenar por relevância/data e filtrar. O título tem botões **Acessar** e **Editar**. Não há mais editoria "Destaque": o destaque do topo é escolhido entre as estrelas |
 | **4 · Geração & Edição** | O GPT recebe o Guia Editorial + notícias selecionadas e escreve a edição inteira no tom da Make; tudo editável campo a campo. Cada bloco traz uma galeria de sugestões de imagem (Openverse) para escolher |
 | **5 · Preview & Export** | Preview fiel do e-mail, download/cópia do HTML pronto para colar no RD Station |
 
 ## Fontes de notícias (em ordem de custo)
 
-1. **Feeds RSS** (grátis) — **somente fontes brasileiras** (conteúdo em português), pouco inclinadas politicamente. Ligados por padrão: Meio & Mensagem, B9, Adnews, Rock Content, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Exame, Superinteressante, G1 (Ciência, Tecnologia e Pop & Arte), Hypeness e Rolling Stone Brasil. Outros BR como opção (Mobile Time, Meio Bit, Startupi, Jovem Nerd, Cinepop, POPline, IGN Brasil, Omelete). Filtrados pelos últimos 8 dias. **Nada em inglês**: feeds internacionais foram removidos, a busca via GPT exige resposta em português e qualquer notícia que chegar em inglês (Google Notícias/GPT) é **traduzida automaticamente** para o português (Google Tradutor, sem chave).
-2. **Google Notícias** (grátis, sem chave) — tópicos de Tecnologia/Ciência para o Destaque e buscas específicas por editoria, últimos 7 dias.
-3. **GPT web search** (usa tokens) — busca **apenas as editorias que ainda têm menos de 8 notícias**, em chamadas paralelas. Se tudo estiver abastecido, não gasta nada.
+1. **Feeds RSS** (grátis) — **somente fontes brasileiras** (conteúdo em português), pouco inclinadas politicamente. Ligados por padrão: Meio & Mensagem, B9, Adnews, Rock Content, Tecnoblog, Canaltech, Olhar Digital, TecMundo, Exame, Superinteressante, G1 (Ciência, Tecnologia e Pop & Arte), Hypeness e Rolling Stone Brasil. Outros BR como opção (Mobile Time, Meio Bit, Startupi, Jovem Nerd, Cinepop, POPline, IGN Brasil, Omelete). **Apenas os últimos 5 dias** e no máximo **60 links** (precisamos de 24). **Nada em inglês**: feeds internacionais foram removidos, a busca via GPT exige resposta em português e qualquer notícia em inglês é **traduzida automaticamente**. Filtros automáticos removem **promoção/ofertas**, **política** (exceto quando é sobre redes sociais) e **notícias repetidas de fontes diferentes**.
+2. **Google Notícias** (grátis, sem chave) — buscas por editoria em pt-BR, últimos 5 dias.
+3. **GPT web search** (usa tokens) — busca **apenas as editorias que ainda não fecharam em 7 selecionadas**, em chamadas paralelas. Se tudo estiver abastecido, não gasta nada.
 
 Também dá para adicionar notícias manualmente.
 
