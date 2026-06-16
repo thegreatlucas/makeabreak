@@ -296,7 +296,7 @@
     </div>
     <label>Chave do Pexels (sugestões de imagem grandes)</label>
     <input type="password" id="cfg-pexels-key" placeholder="cole sua API key gratuita do Pexels">
-    <p class="hint">As sugestões de imagem ficam muito melhores com uma chave gratuita do Pexels (imagens grandes e ilustrativas, sem depender de proxy). Crie em <b>pexels.com/api</b> e cole aqui. Sem ela, o app tenta Bing/Openverse (menos confiável).</p>
+    <p class="hint">Já vem com uma chave do Pexels configurada (imagens grandes e ilustrativas, direto, sem proxy). Pode trocar pela sua própria chave gratuita de <b>pexels.com/api</b> se quiser.</p>
   </div>
 
   <div class="card">
@@ -489,6 +489,8 @@ const SUPA = {
   url:'https://khtkzydjuqckzlybbtph.supabase.co',
   key:'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtodGt6eWRqdXFja3pseWJidHBoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1MDU3NzksImV4cCI6MjA5NzA4MTc3OX0.Cr_WxerJ1D7cDowTQuTAPNbxP6XwgwBIaiQonMHKhTQ'
 };
+// chave gratuita do Pexels para as sugestões de imagem (pode ser trocada em Configuração)
+const PEXELS_KEY = 'b2GNXZgS0r7BfiWbcZGPAAXTym6TRWHi7TVWBEL2Jq4G1Gyce3HajZTz';
 
 /* ===================== NAVEGAÇÃO ===================== */
 function go(tab){
@@ -514,6 +516,7 @@ function loadConfig(){
   // credenciais padrão do Supabase quando o usuário ainda não preencheu nada
   if(!document.getElementById('cfg-supa-url').value && SUPA.url) document.getElementById('cfg-supa-url').value=SUPA.url;
   if(!document.getElementById('cfg-supa-key').value && SUPA.key) document.getElementById('cfg-supa-key').value=SUPA.key;
+  if(!document.getElementById('cfg-pexels-key').value && PEXELS_KEY) document.getElementById('cfg-pexels-key').value=PEXELS_KEY;
   const t=localStorage.getItem('mab_tipo');
   if(t){const r=document.querySelector(`input[name=tipo][value=${t}]`);if(r)r.checked=true;}
   tipoChanged();
