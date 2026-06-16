@@ -1387,7 +1387,7 @@ REDES SOCIAIS:\n${byEd.REDES.map(fmt).join('\n')||'(nenhuma)'}
 NEWS:\n${byEd.NEWS.map(fmt).join('\n')||'(nenhuma)'}
 PLANS:\n${byEd.PLANS.map(fmt).join('\n')||'(nenhuma)'}
 
-Em cada editoria, a notícia [PRINCIPAL] mais forte vira a matéria longa (com título próprio); se houver uma SEGUNDA [PRINCIPAL], coloque-a como o PRIMEIRO bullet (o mais importante); as demais viram bullets com emoji. Inclua o link em cada bullet quando houver.
+Em cada editoria (Updates, News, Plans), gere UMA matéria longa para CADA notícia marcada [PRINCIPAL] — são até 2. A 1ª principal vai em "titulo"/"texto"; se houver 2ª principal, vai em "titulo2"/"texto2" (cada matéria com título próprio e 3 parágrafos). Se a editoria só tem 1 principal, deixe "titulo2"/"texto2"/"sugestao_imagem2" vazios. As demais notícias da editoria viram bullets com emoji e link. REDES é só título do bloco + bullets (sem matéria longa).
 O bloco "destaque" do topo é a notícia marcada [CAPA]; se nenhuma estiver marcada, escolha a matéria mais forte entre todas as editorias. Não repita a matéria de capa como matéria longa na editoria dela (lá ela pode virar bullet).
 
 LEMBRE DAS REGRAS DE ESCRITA: cada "texto" de matéria tem SEMPRE três parágrafos de até 5 linhas, separados por uma linha em branco (\\n\\n). Nada de travessão, nada da fórmula "não é X, é Y", nada de clichê de IA.
@@ -1404,10 +1404,10 @@ Responda SOMENTE com JSON válido neste formato exato:
  "highlights": ["3 manchetes curtíssimas pro banner inicial"],
  "intro": {"saudacao":"saudação criativa ligada ao tema da semana (ex.: 'Boa tarde, Barbies e Oppenheimers!')","texto":"2 a 4 frases curtas de abertura convidando pro break"},
  "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
- "updates": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
+ "updates": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (vazio se só houver 1 [PRINCIPAL])","texto2":"TRÊS parágrafos da 2ª matéria (vazio se não houver)","sugestao_imagem2":"termo de busca da 2ª imagem (ou vazio)","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
  "redes": {"titulo":"TÍTULO CURTO E ESPERTO PRO BLOCO DE REDES","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]},
- "news": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
- "plans": {"titulo":"TÍTULO CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
+ "news": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
+ "plans": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
  "fechamento": "1 frase simpática de despedida"${tipo==='campanha'?',\n "campanha": {"titulo":"título curto do box da campanha","texto":"2 a 4 frases informativas e acolhedoras sobre a causa"}':''}
 }`;
 }
@@ -1436,7 +1436,7 @@ async function generateEdition(regen){
     const imgsAntes=S.edition?.imagens; // preserva URLs de imagem ao regenerar
     S.edition=JSON.parse(j.choices[0].message.content);
     normalizeEdition(S.edition);
-    S.edition.imagens=Object.assign({banner:'',updates:'',redes:'',news:'',plans:''},imgsAntes||{});
+    S.edition.imagens=Object.assign({banner:'',updates:'',updates2:'',redes:'',news:'',news2:'',plans:'',plans2:''},imgsAntes||{});
     setStatus('gen-status','Edição gerada! Revise abaixo.','ok');
     renderEditor();
   }catch(e){
@@ -1452,9 +1452,12 @@ function normalizeEdition(e){
   const noDash=s=>typeof s==='string'?s.replace(/\s*[—–]\s*/g,', ').replace(/[—–]/g,'-'):s;
   ['destaque','updates','news','plans'].forEach(sec=>{
     if(!e[sec])return;
-    if(Array.isArray(e[sec].texto)) e[sec].texto=e[sec].texto.filter(Boolean).join('\n\n');
-    if(typeof e[sec].texto==='string') e[sec].texto=noDash(e[sec].texto);
+    ['texto','texto2'].forEach(tk=>{
+      if(Array.isArray(e[sec][tk])) e[sec][tk]=e[sec][tk].filter(Boolean).join('\n\n');
+      if(typeof e[sec][tk]==='string') e[sec][tk]=noDash(e[sec][tk]);
+    });
     if(e[sec].titulo) e[sec].titulo=noDash(e[sec].titulo);
+    if(e[sec].titulo2) e[sec].titulo2=noDash(e[sec].titulo2);
     (e[sec].bullets||[]).forEach(b=>{if(b&&b.texto)b.texto=noDash(b.texto);});
   });
   if(e.redes){if(e.redes.titulo)e.redes.titulo=noDash(e.redes.titulo);(e.redes.bullets||[]).forEach(b=>{if(b&&b.texto)b.texto=noDash(b.texto);});}
@@ -1467,7 +1470,14 @@ function normalizeEdition(e){
 
 /* ===================== EDITOR ===================== */
 // mapeia cada imagem da edição para a editoria correspondente
-const IMG_ED={banner:'CAPA',updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
+const IMG_ED={banner:'CAPA',updates:'UPDATES',updates2:'UPDATES',redes:'REDES',news:'NEWS',news2:'NEWS',plans:'PLANS',plans2:'PLANS'};
+// n-ésima matéria de destaque (estrela) de uma editoria
+function principalNth(ed,n){
+  const sel=S.items.filter(i=>i.sel&&i.editoria===ed);
+  const stars=sel.filter(i=>i.star); const base=stars.length?stars:sel;
+  if(n===0){const pr=sel.find(i=>i._principal); if(pr)return pr;}
+  return base[n]||null;
+}
 // notícia de capa (destaque do topo), escolhida entre os destaques das editorias
 function principalCapa(){
   const sel=S.items.filter(i=>i.sel);
@@ -1491,12 +1501,14 @@ function toggleSec(k,on){ if(!S.edition)return; S.edition.off=S.edition.off||{};
 function secToggle(k){return `<label class="sw" title="exibir ou ocultar esta seção no e-mail"><input type="checkbox" ${off(k)?'':'checked'} onchange="toggleSec('${k}',this.checked)"><span>exibir</span></label>`;}
 // termo de busca de imagem a partir do TEMA do destaque da editoria
 function imgTerm(title){return String(title||'').replace(/["'“”]/g,'').replace(/\s+/g,' ').trim().split(' ').slice(0,8).join(' ');}
-function imgTermFor(k,sug){const p=principalOf(IMG_ED[k]);return (p&&imgTerm(p.titulo))||sug||'';}
-// imagem da notícia de DESTAQUE da editoria (só cai pras outras se o destaque não tiver imagem)
+function imgPrincipal(k){const ed=IMG_ED[k];const n=/2$/.test(k)?1:0;return ed==='CAPA'?principalCapa():principalNth(ed,n);}
+function imgTermFor(k,sug){const p=imgPrincipal(k);return (p&&imgTerm(p.titulo))||sug||'';}
+// imagem da notícia de DESTAQUE daquela matéria (só cai pras outras se não houver)
 function newsImagesFor(k){
   const ed=IMG_ED[k]; if(!ed)return [];
-  const p=principalOf(ed);
+  const p=imgPrincipal(k);
   if(p&&p.imagem) return [{url:p.imagem,titulo:p.titulo||'',principal:true}];
+  if(ed==='CAPA') return [];
   const seen=new Set(),out=[];
   S.items.filter(i=>i.sel&&i.editoria===ed&&i.imagem).forEach(i=>{if(!seen.has(i.imagem)){seen.add(i.imagem);out.push({url:i.imagem,titulo:i.titulo||''});}});
   return out;
@@ -1518,9 +1530,11 @@ function renderEditor(){
   const imgRow=(k,label,sug)=>{
     const ed=IMG_ED[k];
     const isCapa=ed==='CAPA';
-    let selEd=isCapa?S.items.filter(i=>i.sel&&(i.star||i._capa)):S.items.filter(i=>i.sel&&i.editoria===ed);
-    if(isCapa&&!selEd.length)selEd=S.items.filter(i=>i.sel);
-    const p=principalOf(ed);
+    const n2=/2$/.test(k);   // imagem da 2ª matéria: sem seletor de destaque
+    let selEd=(isCapa&&!n2)?S.items.filter(i=>i.sel&&(i.star||i._capa)):[];
+    if(isCapa&&!n2&&!selEd.length)selEd=S.items.filter(i=>i.sel);
+    if(!isCapa&&!n2)selEd=S.items.filter(i=>i.sel&&i.editoria===ed);
+    const p=imgPrincipal(k);
     const term=imgTermFor(k,sug);
     const newsImgs=newsImagesFor(k);
     return `<div class="ed-field">
@@ -1545,11 +1559,14 @@ function renderEditor(){
       <input type="text" readonly value="${esc('Ano '+cfg('cfg-ano')+' - Edição #'+cfg('cfg-edicao')+' - A Newsletter da Make')}"></div>
     <div class="ed-sec"><h3><i data-lucide="image"></i> Imagens da edição</h3>
       <p class="hint">Como na referência: uma imagem de abertura (banner do destaque) e uma por editoria. Cole URLs de imagens hospedadas — para o envio real, suba na biblioteca de imagens do RD Station e copie o link de lá (e-mail não aceita imagem local).</p>
-      ${imgRow('banner','Banner / Destaque',e.destaque?.sugestao_imagem)}
-      ${imgRow('updates','Updates',e.updates?.sugestao_imagem)}
+      ${imgRow('banner','Banner / Destaque (capa)',e.destaque?.sugestao_imagem)}
+      ${imgRow('updates','Updates — matéria 1',e.updates?.sugestao_imagem)}
+      ${(e.updates?.titulo2||e.updates?.texto2)?imgRow('updates2','Updates — matéria 2',e.updates?.sugestao_imagem2):''}
+      ${imgRow('news','News — matéria 1',e.news?.sugestao_imagem)}
+      ${(e.news?.titulo2||e.news?.texto2)?imgRow('news2','News — matéria 2',e.news?.sugestao_imagem2):''}
+      ${imgRow('plans','Plans — matéria 1',e.plans?.sugestao_imagem)}
+      ${(e.plans?.titulo2||e.plans?.texto2)?imgRow('plans2','Plans — matéria 2',e.plans?.sugestao_imagem2):''}
       ${imgRow('redes','Redes Sociais',e.redes?.sugestao_imagem)}
-      ${imgRow('news','News',e.news?.sugestao_imagem)}
-      ${imgRow('plans','Plans',e.plans?.sugestao_imagem)}
     </div>
     <div class="ed-sec ${off('highlights')?'sec-off':''}" data-sec="highlights"><h3>Banner — highlights <span class="pill DESTAQUE">TOPO</span>${secToggle('highlights')}</h3>
       ${(e.highlights||[]).map((h,i)=>fld('highlights.'+i,'Highlight '+(i+1),h)).join('')}</div>
@@ -1564,19 +1581,25 @@ function renderEditor(){
       ${fld('destaque.texto','Texto',e.destaque?.texto||'',1)}</div>
     <p class="hint" style="margin:14px 0 6px"><i data-lucide="grip-vertical"></i> Dica: arraste os bullets pela alça para mover um link de uma editoria para outra.</p>
     <div class="ed-sec ${off('updates')?'sec-off':''}" data-sec="updates"><h3>Updates <span class="pill UPDATES">UPDATES</span>${secToggle('updates')}</h3>
-      ${fld('updates.titulo','Título',e.updates?.titulo||'')}
-      ${fld('updates.texto','Texto',e.updates?.texto||'',1)}
+      ${fld('updates.titulo','Título da matéria 1',e.updates?.titulo||'')}
+      ${fld('updates.texto','Texto da matéria 1',e.updates?.texto||'',1)}
+      ${fld('updates.titulo2','Título da matéria 2 (opcional)',e.updates?.titulo2||'')}
+      ${fld('updates.texto2','Texto da matéria 2 (opcional)',e.updates?.texto2||'',1)}
       <label>O que mais você precisa saber hoje:</label>${bullets('updates',e.updates?.bullets)}</div>
     <div class="ed-sec ${off('redes')?'sec-off':''}" data-sec="redes"><h3>Redes Sociais <span class="pill REDES">REDES</span>${secToggle('redes')}</h3>
       ${fld('redes.titulo','Título do bloco',e.redes?.titulo||'')}
       <label>E pra ficar por dentro das redes sociais:</label>${bullets('redes',e.redes?.bullets)}</div>
     <div class="ed-sec ${off('news')?'sec-off':''}" data-sec="news"><h3>News <span class="pill NEWS">NEWS</span>${secToggle('news')}</h3>
-      ${fld('news.titulo','Título',e.news?.titulo||'')}
-      ${fld('news.texto','Texto',e.news?.texto||'',1)}
+      ${fld('news.titulo','Título da matéria 1',e.news?.titulo||'')}
+      ${fld('news.texto','Texto da matéria 1',e.news?.texto||'',1)}
+      ${fld('news.titulo2','Título da matéria 2 (opcional)',e.news?.titulo2||'')}
+      ${fld('news.texto2','Texto da matéria 2 (opcional)',e.news?.texto2||'',1)}
       <label>Tem mais News por aqui:</label>${bullets('news',e.news?.bullets)}</div>
     <div class="ed-sec ${off('plans')?'sec-off':''}" data-sec="plans"><h3>Plans <span class="pill PLANS">PLANS</span>${secToggle('plans')}</h3>
-      ${fld('plans.titulo','Título',e.plans?.titulo||'')}
-      ${fld('plans.texto','Texto',e.plans?.texto||'',1)}
+      ${fld('plans.titulo','Título da matéria 1',e.plans?.titulo||'')}
+      ${fld('plans.texto','Texto da matéria 1',e.plans?.texto||'',1)}
+      ${fld('plans.titulo2','Título da matéria 2 (opcional)',e.plans?.titulo2||'')}
+      ${fld('plans.texto2','Texto da matéria 2 (opcional)',e.plans?.texto2||'',1)}
       <label>E pra edificar ainda mais o seu fds:</label>${bullets('plans',e.plans?.bullets)}</div>
     <div class="ed-sec ${off('fechamento')?'sec-off':''}" data-sec="fechamento"><h3>Fechamento${secToggle('fechamento')}</h3>
       ${fld('fechamento','',e.fechamento||'')}</div>`;
@@ -1676,6 +1699,23 @@ function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets,img){
     ${bulletsLabel&&bullets&&bullets.length?`<p style="margin:14px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#111;">${bulletsLabel}</p>${mailBullets(bullets)}`:''}
   </td></tr>`;
 }
+// uma matéria (imagem + título + parágrafos)
+function mailMateria(img,titulo,texto){
+  return `${img?`<img src="${esc(img)}" width="536" alt="${esc(titulo||'')}" style="display:block;width:100%;height:auto;border-radius:8px;margin:0 0 12px;">`:''}
+    ${titulo?`<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${esc(titulo)}</h2>`:''}
+    ${texto?mailParas(texto):''}`;
+}
+// bloco de editoria com até 2 matérias + bullets
+function mailEditoria(tag,tagColor,obj,imgs,sec,bulletsLabel){
+  if(!obj)return'';
+  const m2=(obj.titulo2||obj.texto2);
+  return `<tr><td style="padding:28px 32px 0;">
+    ${tag?`<span style="display:inline-block;background:${tagColor};color:${onColor(tagColor)};font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;padding:3px 10px;">${tag}</span>`:''}
+    ${mailMateria(imgs&&imgs[sec],obj.titulo,obj.texto)}
+    ${m2?`<div style="border-top:1px solid #eee;margin:18px 0 0;padding-top:6px;"></div>${mailMateria(imgs&&imgs[sec+'2'],obj.titulo2,obj.texto2)}`:''}
+    ${bulletsLabel&&obj.bullets&&obj.bullets.length?`<p style="margin:14px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#111;">${bulletsLabel}</p>${mailBullets(obj.bullets)}`:''}
+  </td></tr>`;
+}
 function buildEmailHtml(){
   const e=S.edition;if(!e)return'';
   const merge=cfg('cfg-mergetag')||'*|PRIMEIRO_NOME|*';
@@ -1742,10 +1782,10 @@ function buildEmailHtml(){
 
   ${off('campanha')?'':boxCampanha}
   ${off('destaque')?'':mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto)}
-  ${off('updates')?'':mailSection('UPDATES',secTag,e.updates?.titulo,e.updates?.texto,'O que mais você precisa saber hoje:',e.updates?.bullets,e.imagens?.updates)}
+  ${off('updates')?'':mailEditoria('UPDATES',secTag,e.updates,e.imagens,'updates','O que mais você precisa saber hoje:')}
   ${off('redes')?'':mailSection('REDES SOCIAIS',secTag,e.redes?.titulo||'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets,e.imagens?.redes)}
-  ${off('news')?'':mailSection('NEWS',secTag,e.news?.titulo,e.news?.texto,'Tem mais News por aqui:',e.news?.bullets,e.imagens?.news)}
-  ${off('plans')?'':mailSection('PLANS',secTag,e.plans?.titulo,e.plans?.texto,'E pra edificar ainda mais o seu fds:',e.plans?.bullets,e.imagens?.plans)}
+  ${off('news')?'':mailEditoria('NEWS',secTag,e.news,e.imagens,'news','Tem mais News por aqui:')}
+  ${off('plans')?'':mailEditoria('PLANS',secTag,e.plans,e.imagens,'plans','E pra edificar ainda mais o seu fds:')}
 
   <!-- fechamento -->
   ${(!off('fechamento')&&e.fechamento)?`<tr><td style="padding:26px 32px 8px;">
@@ -1793,7 +1833,8 @@ async function copyText(){
   if(!S.edition)return setStatus('exp-status','Gere a edição primeiro.','err');
   const e=S.edition;
   const bl=a=>(a||[]).map(b=>`${b.emoji} ${b.texto}${b.link?' — '+b.link:''}`).join('\n');
-  const t=`ASSUNTO: ${e.assunto}\n\n${(e.highlights||[]).map(h=>'▸ '+h).join('\n')}\n\n${e.intro?.saudacao}\n${e.intro?.texto}\n${e.campanha?`\n[CAMPANHA]\n${e.campanha.titulo}\n${e.campanha.texto}\n`:''}\n[DESTAQUE]\n${e.destaque?.titulo}\n${e.destaque?.texto}\n\n[UPDATES]\n${e.updates?.titulo}\n${e.updates?.texto}\n\nO que mais você precisa saber hoje:\n${bl(e.updates?.bullets)}\n\n[REDES SOCIAIS]\nE pra ficar por dentro das redes sociais:\n${bl(e.redes?.bullets)}\n\n[NEWS]\n${e.news?.titulo}\n${e.news?.texto}\n\nTem mais News por aqui:\n${bl(e.news?.bullets)}\n\n[PLANS]\n${e.plans?.titulo}\n${e.plans?.texto}\n\nE pra edificar ainda mais o seu fds:\n${bl(e.plans?.bullets)}\n\n${e.fechamento||''}`;
+  const mat=o=>`${o?.titulo||''}\n${o?.texto||''}${(o?.titulo2||o?.texto2)?`\n\n${o.titulo2||''}\n${o.texto2||''}`:''}`;
+  const t=`ASSUNTO: ${e.assunto}\n\n${(e.highlights||[]).map(h=>'▸ '+h).join('\n')}\n\n${e.intro?.saudacao}\n${e.intro?.texto}\n${e.campanha?`\n[CAMPANHA]\n${e.campanha.titulo}\n${e.campanha.texto}\n`:''}\n[DESTAQUE]\n${e.destaque?.titulo}\n${e.destaque?.texto}\n\n[UPDATES]\n${mat(e.updates)}\n\nO que mais você precisa saber hoje:\n${bl(e.updates?.bullets)}\n\n[REDES SOCIAIS]\nE pra ficar por dentro das redes sociais:\n${bl(e.redes?.bullets)}\n\n[NEWS]\n${mat(e.news)}\n\nTem mais News por aqui:\n${bl(e.news?.bullets)}\n\n[PLANS]\n${mat(e.plans)}\n\nE pra edificar ainda mais o seu fds:\n${bl(e.plans?.bullets)}\n\n${e.fechamento||''}`;
   await navigator.clipboard.writeText(t);
   setStatus('exp-status','Texto copiado!','ok');
 }
