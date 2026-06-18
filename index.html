@@ -540,7 +540,10 @@ const FEEDS=[
   {nome:'Meio & Mensagem',url:'https://www.meioemensagem.com.br/feed',ed:'UPDATES',on:true},
   {nome:'B9',url:'https://www.b9.com.br/feed/',ed:'UPDATES',on:true},
   {nome:'Adnews',url:'https://adnews.com.br/feed/',ed:'UPDATES',on:true},
+  {nome:'Propmark',url:'https://propmark.com.br/feed/',ed:'UPDATES',on:true},
+  {nome:'Publicitários Criativos',url:'https://publicitarioscriativos.com/feed/',ed:'UPDATES',on:true},
   {nome:'Rock Content',url:'https://rockcontent.com/br/blog/feed/',ed:'REDES',on:true},
+  {nome:'Tecnoblog · Redes Sociais',url:'https://tecnoblog.net/tema/redes-sociais/feed/',ed:'REDES',on:true},
   // Tecnologia e ferramentas (UPDATES)
   {nome:'Tecnoblog',url:'https://tecnoblog.net/feed/',ed:'UPDATES',on:true},
   {nome:'Canaltech',url:'https://canaltech.com.br/rss/',ed:'UPDATES',on:true},
@@ -557,12 +560,16 @@ const FEEDS=[
   {nome:'G1 Tecnologia',url:'https://g1.globo.com/rss/g1/tecnologia/',ed:'UPDATES',on:true},
   // Cultura digital e curiosidades (NEWS)
   {nome:'Hypeness',url:'https://www.hypeness.com.br/feed/',ed:'NEWS',on:true},
+  {nome:'BBC News Brasil',url:'https://feeds.bbci.co.uk/portuguese/rss.xml',ed:'NEWS',on:true},
   // Cultura e lançamentos (PLANS)
   {nome:'G1 Pop & Arte',url:'https://g1.globo.com/rss/g1/pop-arte/',ed:'PLANS',on:true},
   {nome:'Rolling Stone Brasil',url:'https://rollingstone.com.br/feed/',ed:'PLANS',on:true},
+  {nome:'POPline (música)',url:'https://portalpopline.com.br/feed/',ed:'PLANS',on:true},
+  {nome:'Tracklist (música)',url:'https://tracklist.com.br/feed/',ed:'PLANS',on:true},
+  {nome:'Portal SUCESSO',url:'https://portalsucesso.com.br/feed/',ed:'PLANS',on:true},
+  {nome:'Semana Pop',url:'https://semanapop.com.br/feed/',ed:'PLANS',on:false},
   {nome:'Jovem Nerd',url:'https://jovemnerd.com.br/feed',ed:'PLANS',on:false},
   {nome:'Cinepop',url:'https://cinepop.com.br/feed/',ed:'PLANS',on:false},
-  {nome:'POPline (música)',url:'https://portalpopline.com.br/feed/',ed:'PLANS',on:false},
   {nome:'IGN Brasil',url:'https://br.ign.com/feed.xml',ed:'PLANS',on:false},
   {nome:'Omelete (RSS instável)',url:'https://www.omelete.com.br/rss',ed:'PLANS',on:false},
 ];
@@ -604,7 +611,7 @@ function deacc(s){return String(s||'').toLowerCase().normalize('NFD').replace(/[
 const PROMO_RE=/(promoc|em promo|\bofertas?\b|ofertao|\bdescont(o|os|ao|oes)|\bcupom\b|cupons|pechinch|frete gratis|queima de estoque|saldao|menor preco|mais barat[oa]|preco .{0,25}(cai|caiu|despenc|baix|menor)|(caiu?|despencou|baixou|despencaram) .{0,25}(de )?(preco|valor|r\$)|black friday|cyber monday|\d+\s?%\s?(off|de desconto)|parcelad|a venda por|sai por r\$|por apenas r\$|por r\$\s?\d|de r\$\s?[\d.,]+\s?por|achadinh|melhores (ofertas|precos)|onde comprar|vale a pena comprar|leve \d+ pague)/;
 function isPromo(n){const s=deacc((n&&n.titulo||'')+' '+(n&&n.resumo||''));return PROMO_RE.test(s);}
 // política partidária/institucional — bloqueada, EXCETO quando é sobre redes sociais
-const POL_RE=/\b(eleic|eleitoral|deputad|senado federal|camara dos deputados|congresso nacional|presidente da republica|presidencia da republica|stf\b|supremo tribunal|\btse\b|ministro d|ministerio d|governo federal|partido (politico|dos|de)|comunis|fascis|\bgolpe\b|impeachment|urna eletronica|bolsonaro|\blula\b|reforma (tributaria|da previdencia))\b/;
+const POL_RE=/\b(eleic|eleitoral|eleicao|eleicoes|urna eletronica|pleito|plebiscito|campanha eleitoral|deputad|senador|senadora|vereador|prefeit[oa]|governador|governadora|\bgoverno\b|governo federal|ministr[oa]\b|ministerio d|congresso nacional|camara dos deputados|camara municipal|senado federal|planalto|presidente da republica|presidente lula|presidente bolsonaro|ex-presidente|\bstf\b|supremo tribunal|\btse\b|impeachment|\bgolpe\b|cassac|inelegiv|reforma (tributaria|da previdencia|administrativa)|emenda parlamentar|projeto de lei|\bpec\b|medida provisoria|partido (dos trabalhadores|liberal|politico)|extrema (direita|esquerda)|comunis|fascis|petist|bolsonarist|\blula\b|bolsonaro|tarcisio|\bhaddad\b|alexandre de moraes|gleisi|\bmotta\b|\blira\b|pacheco|flavio dino|alckmin|trump|\bbiden\b|kamala|putin|zelensky|netanyahu|\bmilei\b|maduro|\bgaza\b|\bhamas\b|hezbollah|kremlin)\b/;
 const SOCIAL_RE=/\b(instagram|tiktok|whatsapp|youtube|linkedin|threads|twitter|facebook|kwai|bluesky|rede social|redes sociais|influenciador|creator)\b/;
 function isPolitical(n){
   const s=deacc((n&&n.titulo||'')+' '+(n&&n.resumo||''));
@@ -724,11 +731,16 @@ const GN_BASE='https://news.google.com/rss';
 const GN_PARAMS='hl=pt-BR&gl=BR&ceid=BR:pt-419';
 const GN_QUERIES={
   UPDATES:[`${GN_BASE}/search?q=${encodeURIComponent('"inteligência artificial" OR "marketing digital" OR "nova ferramenta" OR tecnologia when:5d')}&${GN_PARAMS}`,
-           `${GN_BASE}/headlines/section/topic/TECHNOLOGY?${GN_PARAMS}`],
-  REDES:[`${GN_BASE}/search?q=${encodeURIComponent('(Instagram OR TikTok OR WhatsApp OR YouTube OR LinkedIn OR Threads) (recurso OR novidade OR atualização OR teste) when:5d')}&${GN_PARAMS}`],
+           `${GN_BASE}/headlines/section/topic/TECHNOLOGY?${GN_PARAMS}`,
+           `${GN_BASE}/search?q=${encodeURIComponent('(site:mundodomarketing.com.br OR site:aidrop.news OR site:techdrop.news) when:5d')}&${GN_PARAMS}`,
+           `${GN_BASE}/search?q=${encodeURIComponent('site:cnnbrasil.com.br (tecnologia OR "redes sociais" OR internet) when:5d')}&${GN_PARAMS}`,
+           `${GN_BASE}/search?q=${encodeURIComponent('site:folha.uol.com.br (publicidade OR propaganda OR marketing) when:5d')}&${GN_PARAMS}`],
+  REDES:[`${GN_BASE}/search?q=${encodeURIComponent('(Instagram OR TikTok OR WhatsApp OR YouTube OR LinkedIn OR Threads) (recurso OR novidade OR atualização OR teste) when:5d')}&${GN_PARAMS}`,
+         `${GN_BASE}/search?q=${encodeURIComponent('site:exame.com "redes sociais" when:5d')}&${GN_PARAMS}`],
   NEWS:[`${GN_BASE}/search?q=${encodeURIComponent('(viral OR meme OR "cultura digital" OR tendência OR ciência OR descoberta) when:5d')}&${GN_PARAMS}`,
         `${GN_BASE}/headlines/section/topic/SCIENCE?${GN_PARAMS}`],
-  PLANS:[`${GN_BASE}/search?q=${encodeURIComponent('(estreia OR lançamento OR show OR festival OR exposição) (filme OR série OR música OR cinema) Brasil when:5d')}&${GN_PARAMS}`]
+  PLANS:[`${GN_BASE}/search?q=${encodeURIComponent('(estreia OR lançamento OR show OR festival OR exposição) (filme OR série OR música OR cinema) Brasil when:5d')}&${GN_PARAMS}`,
+         `${GN_BASE}/search?q=${encodeURIComponent('(site:billboard.com.br OR site:semanapop.com.br) when:5d')}&${GN_PARAMS}`]
 };
 function parseGNews(xmlText,editoria){
   const doc=new DOMParser().parseFromString(xmlText,'text/xml');
