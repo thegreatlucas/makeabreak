@@ -14,7 +14,7 @@ O fluxo completo:
 | **1 · Configuração** | Chave da OpenAI, modelos, número/ano da edição, merge tag do RD Station, tipo de edição e credenciais do Supabase |
 | **2 · Coleta** | Busca notícias em feeds RSS das fontes recomendadas, no Google Notícias (grátis) e com GPT web search |
 | **3 · Curadoria** | Você escolhe o que entra (meta de 7 por editoria), marca até 2 destaques (⭐) por editoria e dá 👍/👎. No 👎, a news troca por outra; dá pra trazer candidatos 1 a 1 (aceita/recusa), ordenar por relevância/data e filtrar. O título tem botões **Acessar** e **Editar**. Não há mais editoria "Destaque": o destaque do topo é escolhido entre as estrelas |
-| **4 · Geração & Edição** | O GPT recebe o Guia Editorial + notícias selecionadas e escreve a edição inteira no tom da Make; tudo editável campo a campo. Cada bloco traz uma galeria de sugestões de imagem (Openverse) para escolher |
+| **4 · Geração & Edição** | O GPT recebe o Guia Editorial + notícias selecionadas e escreve a edição inteira no tom da Make; tudo editável campo a campo. Até 2 matérias por editoria, cada uma com link da fonte. Cada bloco tem botão **Regenerar** com campo "o que corrigir" e galeria de sugestões de imagem para escolher. Dá para ligar/desligar seções |
 | **5 · Preview & Export** | Preview fiel do e-mail, download/cópia do HTML pronto para colar no RD Station |
 
 ## Fontes de notícias (em ordem de custo)

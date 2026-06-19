@@ -218,6 +218,9 @@
   .ed-sec h3 .sw{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-weight:600;cursor:pointer}
   .ed-sec h3 .sw input{width:auto;height:16px;accent-color:var(--ok)}
   .ed-sec.sec-off{opacity:.55}
+  .regen{display:flex;gap:8px;align-items:stretch;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);flex-wrap:wrap}
+  .regen .fix{flex:1;min-width:240px;min-height:42px}
+  .regen button{flex:0 0 auto;white-space:nowrap;align-self:flex-start}
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -1403,6 +1406,7 @@ NEWS:\n${byEd.NEWS.map(fmt).join('\n')||'(nenhuma)'}
 PLANS:\n${byEd.PLANS.map(fmt).join('\n')||'(nenhuma)'}
 
 Em cada editoria (Updates, News, Plans), gere UMA matéria longa para CADA notícia marcada [PRINCIPAL] — são até 2. A 1ª principal vai em "titulo"/"texto"; se houver 2ª principal, vai em "titulo2"/"texto2" (cada matéria com título próprio e 3 parágrafos). Se a editoria só tem 1 principal, deixe "titulo2"/"texto2"/"sugestao_imagem2" vazios. As demais notícias da editoria viram bullets com emoji e link. REDES é só título do bloco + bullets (sem matéria longa).
+SEMPRE preencha o "link" (e "link2") de cada matéria e o "link" de cada bullet com o URL informado entre parênteses da notícia correspondente. Nunca deixe o link de uma matéria vazio quando a notícia tiver URL.
 O bloco "destaque" do topo é a notícia marcada [CAPA]; se nenhuma estiver marcada, escolha a matéria mais forte entre todas as editorias. Não repita a matéria de capa como matéria longa na editoria dela (lá ela pode virar bullet).
 
 LEMBRE DAS REGRAS DE ESCRITA: cada "texto" de matéria tem SEMPRE três parágrafos de até 5 linhas, separados por uma linha em branco (\\n\\n). Nada de travessão, nada da fórmula "não é X, é Y", nada de clichê de IA.
@@ -1418,11 +1422,11 @@ Responda SOMENTE com JSON válido neste formato exato:
  "assunto": "assunto do e-mail seguindo as regras acima (pode usar __NOME__ como placeholder do primeiro nome)",
  "highlights": ["3 manchetes curtíssimas pro banner inicial"],
  "intro": {"saudacao":"saudação criativa ligada ao tema da semana (ex.: 'Boa tarde, Barbies e Oppenheimers!')","texto":"2 a 4 frases curtas de abertura convidando pro break"},
- "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
- "updates": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (vazio se só houver 1 [PRINCIPAL])","texto2":"TRÊS parágrafos da 2ª matéria (vazio se não houver)","sugestao_imagem2":"termo de busca da 2ª imagem (ou vazio)","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]},
- "redes": {"titulo":"TÍTULO CURTO E ESPERTO PRO BLOCO DE REDES","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]},
- "news": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]},
- "plans": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]},
+ "destaque": {"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","link":"url da notícia de capa","sugestao_imagem":"termo de busca para a imagem do banner (ex.: 'cerimônia abertura olimpíadas paris')"},
+ "updates": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","link":"url da fonte da 1ª matéria","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (vazio se só houver 1 [PRINCIPAL])","texto2":"TRÊS parágrafos da 2ª matéria (vazio se não houver)","link2":"url da fonte da 2ª matéria (ou vazio)","sugestao_imagem2":"termo de busca da 2ª imagem (ou vazio)","bullets":[{"emoji":"🤖","texto":"frase única","link":"url da notícia"}]},
+ "redes": {"titulo":"TÍTULO CURTO E ESPERTO PRO BLOCO DE REDES","sugestao_imagem":"termo de busca de imagem","bullets":[{"emoji":"📚","texto":"frase única","link":"url da notícia"}]},
+ "news": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","link":"url da fonte da 1ª matéria","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","link2":"url da fonte (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"💡","texto":"frase única","link":"url da notícia"}]},
+ "plans": {"titulo":"TÍTULO DA 1ª MATÉRIA CAIXA ALTA","texto":"TRÊS parágrafos","link":"url da fonte da 1ª matéria","sugestao_imagem":"termo de busca de imagem","titulo2":"TÍTULO DA 2ª MATÉRIA (ou vazio)","texto2":"TRÊS parágrafos da 2ª matéria (ou vazio)","link2":"url da fonte (ou vazio)","sugestao_imagem2":"termo da 2ª imagem (ou vazio)","bullets":[{"emoji":"🎵","texto":"frase única","link":"url da notícia"}]},
  "fechamento": "1 frase simpática de despedida"${tipo==='campanha'?',\n "campanha": {"titulo":"título curto do box da campanha","texto":"2 a 4 frases informativas e acolhedoras sobre a causa"}':''}
 }`;
 }
@@ -1451,6 +1455,7 @@ async function generateEdition(regen){
     const imgsAntes=S.edition?.imagens; // preserva URLs de imagem ao regenerar
     S.edition=JSON.parse(j.choices[0].message.content);
     normalizeEdition(S.edition);
+    attachLinks(S.edition);
     S.edition.imagens=Object.assign({banner:'',updates:'',updates2:'',redes:'',news:'',news2:'',plans:'',plans2:''},imgsAntes||{});
     setStatus('gen-status','Edição gerada! Revise abaixo.','ok');
     renderEditor();
@@ -1460,6 +1465,80 @@ async function generateEdition(regen){
   }
   document.getElementById('btn-gerar').disabled=false;
 }
+
+/* preenche o link da fonte em cada matéria (a partir da notícia [PRINCIPAL]), pra news trazer link */
+function attachLinks(e){
+  if(!e)return;
+  if(e.destaque){const p=principalCapa();if(p&&!e.destaque.link)e.destaque.link=p.link||'';}
+  ['updates','news','plans'].forEach(sec=>{
+    if(!e[sec])return; const ed=IMG_ED[sec];
+    const p1=principalNth(ed,0),p2=principalNth(ed,1);
+    if(p1&&!e[sec].link)e[sec].link=p1.link||'';
+    if(p2&&!e[sec].link2)e[sec].link2=p2.link||'';
+  });
+}
+
+/* ===================== REGENERAR POR SEÇÃO ===================== */
+const SEC_LABEL={intro:'Abertura',destaque:'Destaque',updates:'Updates',redes:'Redes Sociais',news:'News',plans:'Plans',fechamento:'Fechamento',campanha:'Campanha'};
+const SEC_SPEC={
+  intro:'{"saudacao":"saudação curta e criativa","texto":"2 a 4 frases de abertura convidando pro break"}',
+  destaque:'{"titulo":"TÍTULO EM CAIXA ALTA COM TROCADILHO","texto":"TRÊS parágrafos de até 5 linhas separados por linha em branco","sugestao_imagem":"termo de busca de imagem","link":"url da notícia de capa"}',
+  updates:'{"titulo":"TÍTULO 1ª MATÉRIA","texto":"TRÊS parágrafos","link":"url da fonte","sugestao_imagem":"termo","titulo2":"TÍTULO 2ª MATÉRIA ou vazio","texto2":"TRÊS parágrafos ou vazio","link2":"url ou vazio","sugestao_imagem2":"termo ou vazio","bullets":[{"emoji":"🤖","texto":"frase única","link":"url ou vazio"}]}',
+  redes:'{"titulo":"TÍTULO CURTO DO BLOCO DE REDES","bullets":[{"emoji":"📚","texto":"frase única","link":"url ou vazio"}]}',
+  news:'{"titulo":"TÍTULO 1ª MATÉRIA","texto":"TRÊS parágrafos","link":"url da fonte","sugestao_imagem":"termo","titulo2":"TÍTULO 2ª MATÉRIA ou vazio","texto2":"TRÊS parágrafos ou vazio","link2":"url ou vazio","sugestao_imagem2":"termo ou vazio","bullets":[{"emoji":"💡","texto":"frase única","link":"url ou vazio"}]}',
+  plans:'{"titulo":"TÍTULO 1ª MATÉRIA","texto":"TRÊS parágrafos","link":"url da fonte","sugestao_imagem":"termo","titulo2":"TÍTULO 2ª MATÉRIA ou vazio","texto2":"TRÊS parágrafos ou vazio","link2":"url ou vazio","sugestao_imagem2":"termo ou vazio","bullets":[{"emoji":"🎵","texto":"frase única","link":"url ou vazio"}]}',
+  fechamento:'{"fechamento":"1 frase simpática de despedida"}',
+  campanha:'{"titulo":"título curto do box da campanha","texto":"2 a 4 frases informativas e acolhedoras"}'
+};
+function normSec(o){
+  if(!o||typeof o!=='object')return;
+  const noDash=s=>typeof s==='string'?s.replace(/\s*[—–]\s*/g,', ').replace(/[—–]/g,'-'):s;
+  ['texto','texto2'].forEach(tk=>{if(Array.isArray(o[tk]))o[tk]=o[tk].filter(Boolean).join('\n\n');if(typeof o[tk]==='string')o[tk]=noDash(o[tk]);});
+  ['titulo','titulo2','saudacao','fechamento'].forEach(k=>{if(o[k])o[k]=noDash(o[k]);});
+  (o.bullets||[]).forEach(b=>{if(b&&b.texto)b.texto=noDash(b.texto);});
+}
+async function chatJSON(user,temp){
+  const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+cfg('cfg-key')},
+    body:JSON.stringify({model:cfg('cfg-model'),temperature:temp??0.9,response_format:{type:'json_object'},
+      messages:[{role:'system',content:GUIA},{role:'user',content:user}]})});
+  const j=await r.json(); if(j.error)throw new Error(j.error.message);
+  return JSON.parse(j.choices[0].message.content);
+}
+function buildSectionPrompt(sec,fix){
+  const edMap={updates:'UPDATES',redes:'REDES',news:'NEWS',plans:'PLANS'};
+  let noticias='';
+  if(edMap[sec]){const sel=S.items.filter(i=>i.sel&&i.editoria===edMap[sec]);
+    noticias=sel.map(i=>`${i.star?'[PRINCIPAL] ':''}"${i.titulo}" (${i.fonte}${i.link?' — '+i.link:''})${i.resumo?': '+i.resumo:''}`).join('\n')||'(sem notícias selecionadas)';}
+  else if(sec==='destaque'){const p=principalCapa();noticias=p?`[CAPA] "${p.titulo}" (${p.fonte}${p.link?' — '+p.link:''})${p.resumo?': '+p.resumo:''}`:'(escolha a matéria mais forte da edição)';}
+  const atual=JSON.stringify(sec==='fechamento'?{fechamento:S.edition.fechamento||''}:(S.edition[sec]||{}));
+  return `Reescreva SOMENTE a seção "${SEC_LABEL[sec]||sec}" da edição #${cfg('cfg-edicao')} (Ano ${cfg('cfg-ano')}) da Make a Break. Mantenha o Guia Editorial e as regras de escrita: 3 parágrafos de até 5 linhas por matéria, sem travessão, sem a fórmula "não é X, é Y", sem clichê de IA.${edMap[sec]?' A editoria pode ter até 2 matérias (titulo/texto e titulo2/texto2), uma por notícia [PRINCIPAL]; as demais viram bullets com emoji e link. Coloque o link da fonte em cada matéria ("link"/"link2") e em cada bullet.':''}
+${fix?`CORRIGIR (instrução do editor, PRIORIDADE MÁXIMA): ${fix}`:'Melhore o texto mantendo os fatos e o sentido.'}
+${noticias?`NOTÍCIAS:\n${noticias}\n`:''}CONTEÚDO ATUAL (ajuste, não repita os mesmos erros):\n${atual}
+Responda SOMENTE com JSON válido neste formato: ${SEC_SPEC[sec]}`;
+}
+async function regenSection(sec){
+  const key=cfg('cfg-key'); if(!key){setStatus('gen-status','Configure a API key na aba 1.','err');go('config');return;}
+  if(!S.edition)return;
+  const fix=(document.getElementById('fix-'+sec)?.value||'').trim();
+  const btn=document.getElementById('regen-'+sec); if(btn){btn.disabled=true;}
+  setStatus('gen-status','Regenerando '+(SEC_LABEL[sec]||sec)+(fix?' com sua correção':'')+'...');
+  try{
+    const obj=await chatJSON(buildSectionPrompt(sec,fix),1.0);
+    if(sec==='fechamento'){
+      S.edition.fechamento=normDashStr(typeof obj==='string'?obj:(obj.fechamento||obj.texto||S.edition.fechamento));
+    }else{
+      normSec(obj);
+      S.edition[sec]=Object.assign(S.edition[sec]||{},obj);
+    }
+    attachLinks(S.edition);
+    const wasExport=document.getElementById('tab-export').classList.contains('active');
+    setStatus('gen-status',(SEC_LABEL[sec]||sec)+' regenerada! ✓','ok');
+    renderEditor();
+    if(wasExport)renderPreview();
+  }catch(e){ setStatus('gen-status','Erro ao regenerar '+(SEC_LABEL[sec]||sec)+': '+e.message,'err'); const b=document.getElementById('regen-'+sec); if(b)b.disabled=false; }
+}
+function normDashStr(s){return typeof s==='string'?s.replace(/\s*[—–]\s*/g,', ').replace(/[—–]/g,'-'):s;}
 
 /* Normaliza o JSON do GPT: junta parágrafos em array e remove travessões que escaparem. */
 function normalizeEdition(e){
@@ -1514,6 +1593,14 @@ function setCapa(id){
 function off(k){return !!(S.edition&&S.edition.off&&S.edition.off[k]);}
 function toggleSec(k,on){ if(!S.edition)return; S.edition.off=S.edition.off||{}; S.edition.off[k]=!on; const sec=document.querySelector(`[data-sec="${k}"]`); if(sec)sec.classList.toggle('sec-off',!on); }
 function secToggle(k){return `<label class="sw" title="exibir ou ocultar esta seção no e-mail"><input type="checkbox" ${off(k)?'':'checked'} onchange="toggleSec('${k}',this.checked)"><span>exibir</span></label>`;}
+// caixa "regenerar esta seção" + campo para dizer o que corrigir
+function regenBox(sec){
+  const lbl=SEC_LABEL[sec]||sec;
+  return `<div class="regen">
+    <textarea id="fix-${sec}" class="fix" placeholder="O que corrigir em ${lbl}? Ex.: tom muito formal, troque o trocadilho, foque na novidade X. (vazio = só melhorar)"></textarea>
+    <button id="regen-${sec}" class="btn sec" type="button" style="margin-top:0" onclick="regenSection('${sec}')"><i data-lucide="refresh-cw"></i> Regenerar ${lbl}</button>
+  </div>`;
+}
 // termo de busca de imagem a partir do TEMA do destaque da editoria
 function imgTerm(title){return String(title||'').replace(/["'“”]/g,'').replace(/\s+/g,' ').trim().split(' ').slice(0,8).join(' ');}
 function imgPrincipal(k){const ed=IMG_ED[k];const n=/2$/.test(k)?1:0;return ed==='CAPA'?principalCapa():principalNth(ed,n);}
@@ -1587,37 +1674,52 @@ function renderEditor(){
       ${(e.highlights||[]).map((h,i)=>fld('highlights.'+i,'Highlight '+(i+1),h)).join('')}</div>
     <div class="ed-sec ${off('abertura')?'sec-off':''}" data-sec="abertura"><h3>Abertura${secToggle('abertura')}</h3>
       ${fld('intro.saudacao','Saudação',e.intro?.saudacao||'')}
-      ${fld('intro.texto','Texto',e.intro?.texto||'',1)}</div>
+      ${fld('intro.texto','Texto',e.intro?.texto||'',1)}
+      ${regenBox('intro')}</div>
     ${e.campanha?`<div class="ed-sec ${off('campanha')?'sec-off':''}" data-sec="campanha"><h3><i data-lucide="ribbon"></i> Box da campanha${secToggle('campanha')}</h3>
       ${fld('campanha.titulo','Título do box',e.campanha?.titulo||'')}
-      ${fld('campanha.texto','Texto',e.campanha?.texto||'',1)}</div>`:''}
+      ${fld('campanha.texto','Texto',e.campanha?.texto||'',1)}
+      ${regenBox('campanha')}</div>`:''}
     <div class="ed-sec ${off('destaque')?'sec-off':''}" data-sec="destaque"><h3>Destaque <span class="pill DESTAQUE">DESTAQUE</span>${secToggle('destaque')}</h3>
       ${fld('destaque.titulo','Título',e.destaque?.titulo||'')}
-      ${fld('destaque.texto','Texto',e.destaque?.texto||'',1)}</div>
+      ${fld('destaque.texto','Texto',e.destaque?.texto||'',1)}
+      ${fld('destaque.link','Link da matéria (fonte)',e.destaque?.link||'')}
+      ${regenBox('destaque')}</div>
     <p class="hint" style="margin:14px 0 6px"><i data-lucide="grip-vertical"></i> Dica: arraste os bullets pela alça para mover um link de uma editoria para outra.</p>
     <div class="ed-sec ${off('updates')?'sec-off':''}" data-sec="updates"><h3>Updates <span class="pill UPDATES">UPDATES</span>${secToggle('updates')}</h3>
       ${fld('updates.titulo','Título da matéria 1',e.updates?.titulo||'')}
       ${fld('updates.texto','Texto da matéria 1',e.updates?.texto||'',1)}
+      ${fld('updates.link','Link da matéria 1 (fonte)',e.updates?.link||'')}
       ${fld('updates.titulo2','Título da matéria 2 (opcional)',e.updates?.titulo2||'')}
       ${fld('updates.texto2','Texto da matéria 2 (opcional)',e.updates?.texto2||'',1)}
-      <label>O que mais você precisa saber hoje:</label>${bullets('updates',e.updates?.bullets)}</div>
+      ${(e.updates?.titulo2||e.updates?.texto2)?fld('updates.link2','Link da matéria 2 (fonte)',e.updates?.link2||''):''}
+      <label>O que mais você precisa saber hoje:</label>${bullets('updates',e.updates?.bullets)}
+      ${regenBox('updates')}</div>
     <div class="ed-sec ${off('redes')?'sec-off':''}" data-sec="redes"><h3>Redes Sociais <span class="pill REDES">REDES</span>${secToggle('redes')}</h3>
       ${fld('redes.titulo','Título do bloco',e.redes?.titulo||'')}
-      <label>E pra ficar por dentro das redes sociais:</label>${bullets('redes',e.redes?.bullets)}</div>
+      <label>E pra ficar por dentro das redes sociais:</label>${bullets('redes',e.redes?.bullets)}
+      ${regenBox('redes')}</div>
     <div class="ed-sec ${off('news')?'sec-off':''}" data-sec="news"><h3>News <span class="pill NEWS">NEWS</span>${secToggle('news')}</h3>
       ${fld('news.titulo','Título da matéria 1',e.news?.titulo||'')}
       ${fld('news.texto','Texto da matéria 1',e.news?.texto||'',1)}
+      ${fld('news.link','Link da matéria 1 (fonte)',e.news?.link||'')}
       ${fld('news.titulo2','Título da matéria 2 (opcional)',e.news?.titulo2||'')}
       ${fld('news.texto2','Texto da matéria 2 (opcional)',e.news?.texto2||'',1)}
-      <label>Tem mais News por aqui:</label>${bullets('news',e.news?.bullets)}</div>
+      ${(e.news?.titulo2||e.news?.texto2)?fld('news.link2','Link da matéria 2 (fonte)',e.news?.link2||''):''}
+      <label>Tem mais News por aqui:</label>${bullets('news',e.news?.bullets)}
+      ${regenBox('news')}</div>
     <div class="ed-sec ${off('plans')?'sec-off':''}" data-sec="plans"><h3>Plans <span class="pill PLANS">PLANS</span>${secToggle('plans')}</h3>
       ${fld('plans.titulo','Título da matéria 1',e.plans?.titulo||'')}
       ${fld('plans.texto','Texto da matéria 1',e.plans?.texto||'',1)}
+      ${fld('plans.link','Link da matéria 1 (fonte)',e.plans?.link||'')}
       ${fld('plans.titulo2','Título da matéria 2 (opcional)',e.plans?.titulo2||'')}
       ${fld('plans.texto2','Texto da matéria 2 (opcional)',e.plans?.texto2||'',1)}
-      <label>E pra edificar ainda mais o seu fds:</label>${bullets('plans',e.plans?.bullets)}</div>
+      ${(e.plans?.titulo2||e.plans?.texto2)?fld('plans.link2','Link da matéria 2 (fonte)',e.plans?.link2||''):''}
+      <label>E pra edificar ainda mais o seu fds:</label>${bullets('plans',e.plans?.bullets)}
+      ${regenBox('plans')}</div>
     <div class="ed-sec ${off('fechamento')?'sec-off':''}" data-sec="fechamento"><h3>Fechamento${secToggle('fechamento')}</h3>
-      ${fld('fechamento','',e.fechamento||'')}</div>`;
+      ${fld('fechamento','',e.fechamento||'')}
+      ${regenBox('fechamento')}</div>`;
   document.getElementById('editor').querySelectorAll('[data-p]').forEach(inp=>{
     inp.oninput=()=>{
       setPath(S.edition,inp.dataset.p,inp.value);
@@ -1704,21 +1806,32 @@ function mailParas(texto){
   return String(texto||'').split(/\n{2,}/).map(p=>p.trim()).filter(Boolean).map(p=>
     `<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
 }
-function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets,img){
+// título da matéria (vira link para a fonte quando há link)
+function mailTitle(titulo,link){
+  if(!titulo)return'';
+  const inner=link?`<a href="${esc(link)}" target="_blank" style="color:${M.titleColor};text-decoration:none;">${esc(titulo)}</a>`:esc(titulo);
+  return `<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${inner}</h2>`;
+}
+function mailMais(link){
+  return link?`<p style="margin:2px 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.4;"><a href="${esc(link)}" target="_blank" style="color:${M.linkColor};font-weight:bold;text-decoration:none;">ler a matéria completa &rarr;</a></p>`:'';
+}
+function mailSection(tag,tagColor,titulo,texto,bulletsLabel,bullets,img,link){
   return `
   <tr><td style="padding:28px 32px 0;">
     ${img?`<img src="${esc(img)}" width="536" alt="${esc(titulo||tag||'')}" style="display:block;width:100%;height:auto;border-radius:8px;margin-bottom:12px;">`:''}
     ${tag?`<span style="display:inline-block;background:${tagColor};color:${onColor(tagColor)};font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;padding:3px 10px;">${tag}</span>`:''}
-    ${titulo?`<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${esc(titulo)}</h2>`:''}
+    ${mailTitle(titulo,link)}
     ${texto?mailParas(texto):''}
+    ${mailMais(link)}
     ${bulletsLabel&&bullets&&bullets.length?`<p style="margin:14px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#111;">${bulletsLabel}</p>${mailBullets(bullets)}`:''}
   </td></tr>`;
 }
-// uma matéria (imagem + título + parágrafos)
-function mailMateria(img,titulo,texto){
+// uma matéria (imagem + título com link + parágrafos + "ler mais")
+function mailMateria(img,titulo,texto,link){
   return `${img?`<img src="${esc(img)}" width="536" alt="${esc(titulo||'')}" style="display:block;width:100%;height:auto;border-radius:8px;margin:0 0 12px;">`:''}
-    ${titulo?`<h2 style="margin:10px 0 12px;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:1.3;color:${M.titleColor};text-transform:uppercase;letter-spacing:.5px;">${esc(titulo)}</h2>`:''}
-    ${texto?mailParas(texto):''}`;
+    ${mailTitle(titulo,link)}
+    ${texto?mailParas(texto):''}
+    ${mailMais(link)}`;
 }
 // bloco de editoria com até 2 matérias + bullets
 function mailEditoria(tag,tagColor,obj,imgs,sec,bulletsLabel){
@@ -1726,8 +1839,8 @@ function mailEditoria(tag,tagColor,obj,imgs,sec,bulletsLabel){
   const m2=(obj.titulo2||obj.texto2);
   return `<tr><td style="padding:28px 32px 0;">
     ${tag?`<span style="display:inline-block;background:${tagColor};color:${onColor(tagColor)};font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:bold;letter-spacing:1px;padding:3px 10px;">${tag}</span>`:''}
-    ${mailMateria(imgs&&imgs[sec],obj.titulo,obj.texto)}
-    ${m2?`<div style="border-top:1px solid #eee;margin:18px 0 0;padding-top:6px;"></div>${mailMateria(imgs&&imgs[sec+'2'],obj.titulo2,obj.texto2)}`:''}
+    ${mailMateria(imgs&&imgs[sec],obj.titulo,obj.texto,obj.link)}
+    ${m2?`<div style="border-top:1px solid #eee;margin:18px 0 0;padding-top:6px;"></div>${mailMateria(imgs&&imgs[sec+'2'],obj.titulo2,obj.texto2,obj.link2)}`:''}
     ${bulletsLabel&&obj.bullets&&obj.bullets.length?`<p style="margin:14px 0 8px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:#111;">${bulletsLabel}</p>${mailBullets(obj.bullets)}`:''}
   </td></tr>`;
 }
@@ -1796,7 +1909,7 @@ function buildEmailHtml(){
   </td></tr>`}
 
   ${off('campanha')?'':boxCampanha}
-  ${off('destaque')?'':mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto)}
+  ${off('destaque')?'':mailSection('DESTAQUE',destaqueTag,e.destaque?.titulo,e.destaque?.texto,'','','',e.destaque?.link)}
   ${off('updates')?'':mailEditoria('UPDATES',secTag,e.updates,e.imagens,'updates','O que mais você precisa saber hoje:')}
   ${off('redes')?'':mailSection('REDES SOCIAIS',secTag,e.redes?.titulo||'','','E pra ficar por dentro das redes sociais:',e.redes?.bullets,e.imagens?.redes)}
   ${off('news')?'':mailEditoria('NEWS',secTag,e.news,e.imagens,'news','Tem mais News por aqui:')}
