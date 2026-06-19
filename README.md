@@ -118,6 +118,27 @@ create policy "anon update news" on public.news_cache for update to anon using (
 
 > Auto-refresh é client-side: enquanto a página estiver aberta, ele checa a cada 30 min e repõe quando o cache passa de 6h; ao abrir o Dashboard, mostra o cache na hora e atualiza se estiver velho. Não há servidor/cron próprio (o site é estático no GitHub Pages).
 
+### Rascunho da coleta
+
+A coleta de notícias e os flags de seleção (selecionada, estrela, editoria, capa) são salvos numa terceira tabela (`coleta`), por edição, para **recuperar ao recarregar** a página e permitir **trabalho simultâneo**. Salva automático (debounce) e usa soft-delete (`removed`) para não apagar itens de quem está junto. Rode no SQL Editor:
+
+```sql
+create table if not exists public.coleta (
+  edicao     text not null,
+  item_key   text not null,
+  titulo text, fonte text, link text, resumo text, imagem text, data timestamptz,
+  editoria text, sel boolean default false, star boolean default false,
+  vote smallint default 0, principal boolean default false, capa boolean default false,
+  removed boolean default false,
+  updated_at timestamptz not null default now(),
+  primary key (edicao, item_key)
+);
+alter table public.coleta enable row level security;
+create policy "anon read coleta"   on public.coleta for select to anon using (true);
+create policy "anon insert coleta" on public.coleta for insert to anon with check (true);
+create policy "anon update coleta" on public.coleta for update to anon using (true) with check (true);
+```
+
 ## Guia Editorial (resumo embutido no prompt)
 
 Tom leve, conversacional, inteligente e bem-humorado. Pode: trocadilhos, referências pop, frases de efeito. Não pode: corporativês, clickbait, sensacionalismo, ironia agressiva. Assuntos proibidos: política partidária, tragédias, crimes, guerra, conteúdo adulto, fake news e fofoca. Toda notícia precisa responder: *por que isso importa? o que muda? o que isso revela de tendência?*

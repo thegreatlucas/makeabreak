@@ -360,7 +360,7 @@
 <section class="tab" id="tab-coleta">
   <div class="card">
     <h2>Fontes RSS <span class="tag">GRÁTIS</span></h2>
-    <p class="hint">Feeds das fontes recomendadas no Guia Editorial. Desmarque o que não quiser buscar.</p>
+    <p class="hint">Feeds das fontes recomendadas no Guia Editorial. Desmarque o que não quiser buscar. <i data-lucide="cloud"></i> A coleta e as seleções são salvas no Supabase automaticamente (recupera ao recarregar e dá pra trabalhar junto).</p>
     <div class="feeds" id="feed-list"></div>
     <div class="toolbar">
       <button class="btn" onclick="fetchFeeds()"><i data-lucide="rss"></i> Buscar feeds RSS</button>
@@ -394,7 +394,7 @@
 <section class="tab" id="tab-curadoria">
   <div class="card">
     <h2>Curadoria</h2>
-    <p class="hint">Marque o que entra na edição. A ⭐ define a matéria principal de cada editoria (vira o texto longo; o resto vira bullet). Lembre da regra de ouro: a Make não replica notícia, traduz relevância.</p>
+    <p class="hint">Marque o que entra na edição. A ⭐ define a matéria principal de cada editoria (vira o texto longo; o resto vira bullet). Lembre da regra de ouro: a Make não replica notícia, traduz relevância. <i data-lucide="cloud"></i> Suas seleções são salvas no Supabase automaticamente.</p>
     <div class="toolbar">
       <select id="filtro-editoria" onchange="renderItems()">
         <option value="">Todas as editorias</option>
@@ -502,6 +502,7 @@ function go(tab){
   document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.id==='tab-'+tab));
   if(tab==='curadoria') renderItems();
   if(tab==='dashboard') openDashboard();
+  if(tab==='coleta'||tab==='curadoria') draftLoad(); // puxa o rascunho/coleta de colegas
   window.scrollTo(0,0);
 }
 document.querySelectorAll('nav.steps button').forEach(b=>b.onclick=()=>go(b.dataset.tab));
@@ -706,6 +707,7 @@ function renderCounts(){
   document.getElementById('coleta-counts').innerHTML=
     Object.entries(by).map(([k,v])=>`<span>${k==='REDES'?'REDES SOCIAIS':k}: <b>${v}</b></span>`).join('')+
     `<span>total: <b>${S.items.length}</b></span>`;
+  syncDraft();
 }
 async function fetchFeeds(){
   saveConfig();
@@ -906,6 +908,7 @@ function renderItems(){
   refreshIcons(); renderProgress();
   const sel=S.items.filter(i=>i.sel).length;
   setStatus('cur-status',sel+' selecionadas');
+  syncDraft();
 }
 function itemRow(i){
   if(i.editing) return itemEditRow(i);
@@ -963,6 +966,7 @@ async function curaVote(id,val){
   const i=S.items.find(x=>x.id===id);if(!i)return;
   if(val<0){
     await recordVote(i,i.editoria,-1,'curadoria');
+    draftSaveRemoved(i);                 // marca como removida no rascunho (não volta no reload)
     const ed=i.editoria;
     S.items=S.items.filter(x=>x.id!==id);
     renderItems();
@@ -1115,6 +1119,51 @@ async function supaSyncPrefs(){
     const seen=new Set(FEEDBACK.map(f=>(f.created_at||'')+'|'+(f.item_key||'')));
     data.forEach(f=>{const k=(f.created_at||'')+'|'+(f.item_key||''); if(!seen.has(k)){seen.add(k);FEEDBACK.push(f);if(f.vote<0)REJECTED.add(f.item_key);}});
     saveLocalFeedback(); buildPrefs();
+  }catch(e){}
+}
+
+/* ===================== RASCUNHO DA COLETA (Supabase) ===================== */
+/* Salva a coleta + flags de seleção no Supabase, por edição, para recuperar
+   ao recarregar e permitir trabalho simultâneo. */
+let _draftTimer=null;
+function draftRow(i,removed){
+  const d=Date.parse(i.data);
+  return {edicao:String(cfg('cfg-edicao')||''),item_key:itemKey(i),titulo:(i.titulo||'').slice(0,500),
+    fonte:(i.fonte||'').slice(0,160),link:i.link||'',resumo:(i.resumo||'').slice(0,500),
+    imagem:(i.imagem||'').slice(0,800),data:isNaN(d)?null:new Date(d).toISOString(),
+    editoria:i.editoria||'UPDATES',sel:!!i.sel,star:!!i.star,vote:i.vote||0,
+    principal:!!i._principal,capa:!!i._capa,removed:!!removed,updated_at:new Date().toISOString()};
+}
+async function pushDraft(rows){
+  if(!supaConfigured()||!rows.length)return;
+  try{const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+    await fetch(url+'/rest/v1/coleta?on_conflict=edicao,item_key',{method:'POST',
+      headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=minimal',...supaHeaders()},
+      body:JSON.stringify(rows)});
+  }catch(e){}
+}
+function syncDraft(){ // debounce: salva toda a coleta atual
+  if(!supaConfigured())return;
+  clearTimeout(_draftTimer);
+  _draftTimer=setTimeout(()=>{ pushDraft(S.items.map(i=>draftRow(i,false))); }, 1500);
+}
+function draftSaveRemoved(i){ return pushDraft([draftRow(i,true)]); } // soft-delete (thumbs down)
+async function draftLoad(){
+  if(!supaConfigured())return;
+  try{const url=cfg('cfg-supa-url').replace(/\/+$/,'');
+    const ed=encodeURIComponent(String(cfg('cfg-edicao')||''));
+    const r=await fetch(url+`/rest/v1/coleta?edicao=eq.${ed}&removed=eq.false&select=*&order=updated_at.desc&limit=400`,{headers:supaHeaders()});
+    if(!r.ok)return;
+    const rows=await r.json(); let added=0;
+    rows.forEach(row=>{
+      const k=row.item_key; if(!k||REJECTED.has(k))return;
+      if(S.items.some(x=>itemKey(x)===k))return;            // não duplica nem sobrescreve local
+      S.items.push({id:_id++,titulo:row.titulo||'',fonte:row.fonte||'',link:row.link||'',
+        resumo:row.resumo||'',data:row.data||'',imagem:row.imagem||'',editoria:row.editoria||'UPDATES',
+        sel:!!row.sel,star:!!row.star,vote:row.vote||0,_principal:!!row.principal,_capa:!!row.capa});
+      added++;
+    });
+    if(added){ renderCounts(); if(document.getElementById('tab-curadoria').classList.contains('active'))renderItems(); }
   }catch(e){}
 }
 function resetPrefs(){
@@ -1737,6 +1786,7 @@ function renderEditor(){
   bindBullets();
   bindDnD();
   refreshIcons();
+  syncDraft(); // persiste mudanças de destaque/capa nos flags da coleta
 }
 function brow(sec,i,b){
   return `<div class="bullet-row" data-b="${sec}.${i}">
@@ -1985,7 +2035,7 @@ async function copyText(){
 /* ===================== INIT ===================== */
 loadLocalFeedback(); buildPrefs(); renderDashboard();
 dashFromCache();   // pré-carrega o cache do Supabase pra abrir o dashboard instantâneo
-supaSyncPrefs();
+supaSyncPrefs().then(draftLoad);   // sincroniza prefs e recupera a coleta salva (com flags) ao recarregar
 // auto-refresh: checa a cada 30 min e repõe dos feeds quando o cache passa de 6h
 setInterval(autoTickDashboard, 30*60*1000);
 refreshIcons();    // desenha os ícones Lucide do layout estático
