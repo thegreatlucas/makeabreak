@@ -221,6 +221,7 @@
   .regen{display:flex;gap:8px;align-items:stretch;margin-top:12px;padding-top:10px;border-top:1px dashed var(--border);flex-wrap:wrap}
   .regen .fix{flex:1;min-width:240px;min-height:42px}
   .regen button{flex:0 0 auto;white-space:nowrap;align-self:flex-start}
+  code{background:var(--panel2);border:1px solid var(--border);border-radius:4px;padding:1px 5px;font-size:12px;font-family:Consolas,monospace}
   @media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
 </style>
 </head>
@@ -1359,6 +1360,8 @@ ESTILO DOS TÍTULOS (exemplos reais da news): "ELA ATÉ QUE TEM SE ESFORÇADO, M
 
 ESTILO DAS MATÉRIAS: SEMPRE três parágrafos, cada um com até 5 linhas (textos curtos de um parágrafo só estão PROIBIDOS). Separe os parágrafos com uma linha em branco. Primeiro parágrafo: contextualiza a notícia de forma leve. Segundo: traduz a relevância (por que importa, o que muda, que tendência revela, como mexe com marketing/comunicação/negócios/comportamento). Terceiro: fecha com um gancho conversacional, uma referência pop ou uma provocação leve pro leitor ("Vai assistir?", "Preparado para o impacto?"). Conversacional do começo ao fim.
 
+LINKS DENTRO DA MATÉRIA (MUITO IMPORTANTE): coloque de 2 a 4 hiperlinks INLINE no meio do texto, em palavras ou trechos naturais (nunca a frase inteira), usando o formato Markdown [trecho](url). Como a Make faz: alguns links levam à fonte/afirmação factual ou a outra notícia relacionada; outros levam a referências pop, cenas, clipes ou trailers. Para referências culturais (cenas, músicas, trailers, memes), use uma busca: YouTube "https://www.youtube.com/results?search_query=TERMO" ou Google "https://www.google.com/search?q=TERMO" (com o TERMO codificado por espaços em +). Para fatos, use o URL da notícia informado. NUNCA invente URLs de páginas específicas; quando não tiver o link exato, use a busca. Exemplo de trecho: "só de lembrar a [cena da fornalha](https://www.youtube.com/results?search_query=toy+story+3+cena+da+fornalha) já fico assim".
+
 ESTILO DOS BULLETS: frase única, direta, começando com um emoji que combine com o assunto. Ex.: "🤖 O primeiro beta do iOS 18.2 chegou, e trouxe mais funções baseadas em I.A."
 
 ASSUNTOS PROIBIDOS: política partidária, disputas ideológicas, tragédias, crimes violentos, guerra, acidentes, conteúdo adulto, fake news, teorias conspiratórias, celebridades sem relevância cultural, fofoca pessoal.
@@ -1659,6 +1662,7 @@ function renderEditor(){
     ${fld('assunto','Assunto do e-mail',e.assunto)}
     <div class="ed-field"><label>Pre-header <span style="color:var(--muted);font-weight:400">· fixo no padrão da Make</span></label>
       <input type="text" readonly value="${esc('Ano '+cfg('cfg-ano')+' - Edição #'+cfg('cfg-edicao')+' - A Newsletter da Make')}"></div>
+    <p class="hint" style="margin:2px 0 10px"><i data-lucide="link"></i> Para colocar um link numa palavra do texto, escreva <code>[palavra](https://endereço)</code>. Ex.: <code>a [cena da fornalha](https://youtube.com/...)</code>. O GPT já insere alguns automaticamente.</p>
     <div class="ed-sec"><h3><i data-lucide="image"></i> Imagens da edição</h3>
       <p class="hint">Como na referência: uma imagem de abertura (banner do destaque) e uma por editoria. Cole URLs de imagens hospedadas — para o envio real, suba na biblioteca de imagens do RD Station e copie o link de lá (e-mail não aceita imagem local).</p>
       ${imgRow('banner','Banner / Destaque (capa)',e.destaque?.sugestao_imagem)}
@@ -1801,10 +1805,21 @@ function mailBullets(arr){
       ${esc(b.emoji)}&nbsp; ${b.link?`<a href="${esc(b.link)}" target="_blank" style="color:${M.linkColor};text-decoration:underline;">${esc(b.texto)}</a>`:esc(b.texto)}
     </td></tr>`).join('')}</table>`;
 }
+// converte links inline em Markdown [trecho](url) para <a>, escapando o resto com segurança
+function inlineMd(s){
+  s=String(s||''); let out='',last=0,m; const re=/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g;
+  while((m=re.exec(s))){
+    out+=esc(s.slice(last,m.index));
+    out+=`<a href="${esc(m[2])}" target="_blank" style="color:${M.linkColor};text-decoration:underline;">${esc(m[1])}</a>`;
+    last=re.lastIndex;
+  }
+  out+=esc(s.slice(last));
+  return out.replace(/\n/g,'<br>');
+}
 function mailParas(texto){
-  // quebra "texto" em parágrafos (separados por linha em branco) e renderiza um <p> por parágrafo
+  // quebra "texto" em parágrafos (linha em branco) e renderiza links inline [trecho](url)
   return String(texto||'').split(/\n{2,}/).map(p=>p.trim()).filter(Boolean).map(p=>
-    `<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(p).replace(/\n/g,'<br>')}</p>`).join('');
+    `<p style="margin:0 0 14px;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${inlineMd(p)}</p>`).join('');
 }
 // título da matéria (vira link para a fonte quando há link)
 function mailTitle(titulo,link){
@@ -1872,7 +1887,7 @@ function buildEmailHtml(){
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
       <td style="background:${shade(cor,1.85)};border-left:5px solid ${cor};padding:16px 18px;">
         <p style="margin:0 0 6px;font-family:Arial,Helvetica,sans-serif;font-size:15px;font-weight:bold;color:${shade(cor,.6)};">🎗️ ${esc(rep(e.campanha.titulo||''))}</p>
-        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:${TXT};">${esc(rep(e.campanha.texto||''))}</p>
+        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.6;color:${TXT};">${inlineMd(rep(e.campanha.texto||''))}</p>
       </td>
     </tr></table>
   </td></tr>`:'';
@@ -1905,7 +1920,7 @@ function buildEmailHtml(){
   <!-- abertura -->
   ${off('abertura')?'':`<tr><td style="padding:28px 32px 0;">
     <p style="margin:0 0 10px;font-family:Arial,Helvetica,sans-serif;font-size:17px;font-weight:bold;color:#111;">${esc(rep(e.intro?.saudacao||''))}</p>
-    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${esc(rep(e.intro?.texto||'')).replace(/\n/g,'<br>')}</p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};">${inlineMd(rep(e.intro?.texto||''))}</p>
   </td></tr>`}
 
   ${off('campanha')?'':boxCampanha}
@@ -1917,7 +1932,7 @@ function buildEmailHtml(){
 
   <!-- fechamento -->
   ${(!off('fechamento')&&e.fechamento)?`<tr><td style="padding:26px 32px 8px;">
-    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};font-style:italic;">${esc(rep(e.fechamento))}</p>
+    <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.6;color:${TXT};font-style:italic;">${inlineMd(rep(e.fechamento))}</p>
   </td></tr>`:''}
 
   <tr><td style="padding:18px 32px;text-align:center;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#999999;">Uma iniciativa da área de estratégia 💙</td></tr>
