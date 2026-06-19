@@ -483,7 +483,8 @@ const S = {
 };
 let _id = 1;
 const RECENT_DAYS = 5;   // só notícias dos últimos 5 dias
-const MAX_LINKS   = 60;  // teto de links coletados (precisamos de 24 no total)
+const MIN_PER_ED  = 10;  // mínimo de notícias por editoria
+const MAX_PER_ED  = 20;  // máximo de notícias por editoria (mantém as de maior afinidade)
 const MAX_STARS   = 2;   // até 2 destaques (estrelas) por editoria
 
 /* ===================== CREDENCIAIS PADRÃO (deploy) ===================== */
@@ -694,13 +695,31 @@ function recentOnly(items,days){
 }
 function addItems(arr){
   arr.forEach(n=>{
-    if(S.items.length>=MAX_LINKS) return;                        // teto de 60 links
     if(blocked(n,S.items)) return;                               // promoção, política ou semelhante
-    if(S.items.some(x=>x.link===n.link&&n.link)) return;        // dedup por link
-    if(S.items.some(x=>x.titulo.toLowerCase()===n.titulo.toLowerCase())) return;
+    if(scoreItem(n)<=-3) return;                                 // joinhas: afinidade muito negativa, nem traz
+    if(n.link&&S.items.some(x=>x.link===n.link)) return;        // dedup por link
+    if(S.items.some(x=>x.titulo.toLowerCase()===(n.titulo||'').toLowerCase())) return;
+    const ed=n.editoria||'UPDATES';
+    const inEd=S.items.filter(x=>x.editoria===ed);
+    if(inEd.length>=MAX_PER_ED){                                 // editoria cheia (máx. 20)
+      const worst=inEd.filter(x=>!x.sel).sort((a,b)=>scoreItem(a)-scoreItem(b))[0];
+      if(!worst || scoreItem(n)<=scoreItem(worst)) return;      // só entra se tiver mais afinidade
+      S.items=S.items.filter(x=>x!==worst);                     // troca a de menor afinidade (joinhas mandam)
+    }
     S.items.push({id:_id++,sel:false,star:false,...n});
   });
   renderCounts();
+}
+// completa cada editoria até o mínimo de 10 (top-up automático nos últimos 5 dias)
+async function ensureMinPerEditoria(){
+  for(const ed of ALL_ED){
+    let guard=0;
+    while(S.items.filter(i=>i.editoria===ed).length<MIN_PER_ED && guard<3){
+      const before=S.items.length;
+      await fetchMoreForEditoria(ed,RECENT_DAYS,arr=>addItems(arr));
+      guard++; if(S.items.length<=before) break; // nada novo: para
+    }
+  }
 }
 function renderCounts(){
   const by={};S.items.forEach(i=>by[i.editoria]=(by[i.editoria]||0)+1);
@@ -723,8 +742,10 @@ async function fetchFeeds(){
       log('coleta-log',`✔ ${f.nome}: ${items.length} notícias (últimos 8 dias)`);
     }catch(e){log('coleta-log',`✘ ${f.nome}: ${e.message}`);}
   }));
+  setStatus('coleta-status','Completando editorias (mínimo de '+MIN_PER_ED+')...');
+  await ensureMinPerEditoria();
   await translateColeta();
-  setStatus('coleta-status',`${ok}/${ativos.length} feeds carregados — ${S.items.length} notícias na lista`, ok?'ok':'err');
+  setStatus('coleta-status',`${ok}/${ativos.length} feeds — ${S.items.length} notícias (${MIN_PER_ED}–${MAX_PER_ED} por editoria)`, ok?'ok':'err');
 }
 // traduz para PT qualquer item da coleta que tenha vindo em inglês
 async function translateColeta(){
@@ -779,9 +800,11 @@ async function gnewsSearch(){
     total+=got;
     log('coleta-log',`${got?'✔':'✘'} Google News ${ED_LABEL(ed)}: ${got} notícias`);
   }));
+  setStatus('coleta-status','Completando editorias (mínimo de '+MIN_PER_ED+')...');
+  await ensureMinPerEditoria();
   await translateColeta();
   setStatus('coleta-status',
-    total?`Google Notícias trouxe ${total} notícias — total: ${S.items.length}`:'Google Notícias falhou — tente o GPT',
+    total?`Google Notícias trouxe ${total} — total: ${S.items.length} (${MIN_PER_ED}–${MAX_PER_ED} por editoria)`:'Google Notícias falhou — tente o GPT',
     total?'ok':'err');
 }
 
@@ -1201,8 +1224,10 @@ function isKnownNews(n){
 }
 function pushReserve(arr){arr.forEach(n=>{if(isKnownNews(n)||isPromo(n)||isPolitical(n))return;if(tooSimilar(n,S.items)||tooSimilar(n,S.reserve))return;S.reserve.push(n);});}
 function pickReserve(ed){
-  let best=-1,bd=-Infinity;
-  S.reserve.forEach((n,i)=>{if(n.editoria!==ed)return;const d=Date.parse(n.data)||0;if(d>=bd){bd=d;best=i;}});
+  // escolhe a de MAIOR afinidade (joinhas), desempata pela mais recente
+  let best=-1,bs=-Infinity,bd=-Infinity;
+  S.reserve.forEach((n,i)=>{if(n.editoria!==ed)return;const s=scoreItem(n),d=Date.parse(n.data)||0;
+    if(s>bs||(s===bs&&d>=bd)){bs=s;bd=d;best=i;}});
   return best>=0?S.reserve.splice(best,1)[0]:null;
 }
 function addReplacement(n){S.items.push({id:_id++,sel:false,star:false,vote:0,_new:true,...n});}
